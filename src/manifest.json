@@ -17,6 +17,7 @@
 		"run_at": "document_start"
 	}],
 	"homepage_url": "<<homepage>>",
+	"update_url": "https://raw.githubusercontent.com/dnsev/iex/master/builds/updates.xml",
 	"permissions": [
 		"storage"
 	]

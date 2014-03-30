@@ -11,8 +11,8 @@
 // @include     *://boards.4chan.org/*
 // ==/UserScript==
 // ==Meta==
-// @updateURL   https://raw.github.com/dnsev/iex/master/builds/{{meta}}
-// @downloadURL https://raw.github.com/dnsev/iex/master/builds/{{target}}
+// @updateURL   https://raw.githubusercontent.com/dnsev/iex/master/builds/{{meta}}
+// @downloadURL https://raw.githubusercontent.com/dnsev/iex/master/builds/{{target}}
 // ==/Meta==
 
 
