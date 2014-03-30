@@ -1,0 +1,353 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="description" content="Expand images nicely" />
+	<meta name="keywords" content="iex,image extensions,image,images,extensions,expand,4chan,4chanx,4chan-x,appchanx,appchan-x,javascript,userscript,firefox,chrome,greasemonkey" />
+	<meta name="author" content="dnsev" />
+	<link rel="shortcut icon" href="favicon.png" />
+	<link rel="stylesheet" href="style.css" />
+	<title>dnsev / iex / Image Extensions</title>
+	<script src="script.js"></script>
+</head>
+<body>
+
+
+<div class="main_outer"><div class="main_inner">
+
+	<div class="left_container">
+		<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+			<div class="left_container_inner">
+
+				<div class="title_container">
+
+					<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+						<div class="title_container_middle">
+							<div class="title_text_container"><a class="title_text event_link" data-content="&#x131;ex" data-event-link-href="#!" href=""></a></div>
+							<div class="title_label_container"><div class="title_label_container_inner"><div class="title_label">Image Extensions</div><div class="title_version_container"><span class="title_version changelog_version"></span></div></div></div>
+							<div class="title_author_container"><a href="https://github.com/dnsev" target="_blank" class="title_author">dnsev</a></div>
+						</div>
+					</div></div>
+
+				</div><div class="navigation">
+
+					<div class="navigation_link_container"><a class="navigation_link navigation_link_selected event_link" href="#!home" data-event-link-href="#!" data-navigation-path-highlight="home"><span class="navigation_link_text">home</span></a></div>
+					<div class="navigation_link_container"><a class="navigation_link event_link" href="#!about" data-event-link-href="#!about" data-navigation-path-highlight="about"><span class="navigation_link_text">about</span></a></div>
+					<div class="navigation_link_container"><a class="navigation_link event_link" href="#!changes" data-event-link-href="#!changes" data-navigation-path-highlight="changes"><span class="navigation_link_text">changes</span></a></div>
+					<div class="navigation_link_container"><a class="navigation_link event_link" href="https://github.com/dnsev/iex" data-navigation-path-highlight="github" data-event-link-href="#!github" data-event-link-allow-if-no-change="true"><span class="navigation_link_text">github</span></a></div>
+
+				</div>
+
+
+				<div class="content_separator">
+					<div class="content_separator_part1"></div>
+					<div class="content_separator_part2"></div>
+				</div>
+
+			</div>
+		</div></div>
+	</div>
+
+	<div class="right_container">
+
+		<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+
+			<div class="right_container_inner">
+
+				<div class="section section_selected" data-section-name="home">
+
+					<div class="paragraph install_container">
+						<a class="install_link event_link" href="#!home/install" data-event-link-href="#!home/install"><span class="install_link_underline"></span><span class="install_link_text">Install</span></a> | <a class="demo_link event_link" href="#!about/demo" data-event-link-href="#!about/demo"><span class="demo_link_underline"></span><span class="demo_link_text">Preview</span></a>
+					</div>
+					<div class="paragraph">
+						iex is a userscript extension for 4chan's image boards, which adds support for better inline image previewing.
+					</div>
+					<div class="paragraph">
+						Its primary focus is to allow zooming in on images without having to open them in a new tab. This makes high resolution images, low resolution images, and comic pages faster and easier to browse.
+					</div>
+
+				</div>
+				<div class="section section_selected" data-section-name="home/install">
+
+					<div class="paragraph">
+					<div class="install_instruction_table">
+					<div class="install_instruction_cell">
+					<div class="install_instruction_cell_body">
+
+						<div class="paragraph">
+							<div class="icon icon_firefox"></div><span class="install_instruction_label">Firefox</span>
+						</div>
+						<ul class="paragraph_list">
+							<li>
+								Install <a href="https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/" target="_blank">Greasemonkey</a>
+							</li>
+							<li>
+								Install <a href="https://raw.github.com/dnsev/iex/master/builds/iex.user.js" target="_blank">iex</a>
+							</li>
+						</ul>
+
+					</div>
+					</div>
+					<div class="install_instruction_cell">
+					<div class="install_instruction_cell_body">
+
+						<div class="paragraph">
+							<div class="icon icon_chrome"></div><span class="install_instruction_label">Chrome</span>
+						</div>
+						<ul class="paragraph_list">
+							<li>
+								Download <a href="https://raw.github.com/dnsev/iex/master/builds/iex.crx" target="_blank" download="iex.crx">iex</a>
+							</li>
+							<li>
+								Drop in <a href="chrome://extensions/" target="_blank">chrome://extensions/</a>
+							</li>
+						</ul>
+
+					</div>
+					</div>
+					</div>
+					</div>
+
+					<div class="paragraph paragraph_large_sep paragraph_small paragraph_dim">
+						If your browser is not displayed, chances are it's not directly supported. Use the download for the browser most similar to your at your own risk
+					</div>
+
+				</div>
+				<div class="section" data-section-name="about">
+
+					<div class="paragraph">
+						<div class="paragraph_label"><span class="paragraph_label_text">Features</span>:</div>
+						<ul class="paragraph_list">
+							<li>Inline zooming in and out</li>
+							<li>Nicer display of transparent images</li>
+							<li>Background thumbnail preview displayed before load</li>
+						</ul>
+						<div class="paragraph">
+							While it may not seem like a huge feature list, it can greatly change how you view images. Feature previews are available on <a class="event_link" href="#!about/demo" data-event-link-href="#!about/demo">this page</a>.
+						</div>
+					</div>
+
+					<div class="paragraph paragraph_large_sep">
+						<div class="paragraph_label"><span class="paragraph_label_text">Testing</span>:</div>
+						<div class="paragraph">
+							This might not always be an up to date list, but it provides some of the setups that it has been confirmed to work on.
+						</div>
+
+						<div class="paragraph version_list">
+							<span class="version_list_part_label">iex</span><span class="version_list_part_value"> 1.0</span>;
+							<span class="version_list_part_label">Firefox</span><span class="version_list_part_value"> 28.0</span>;
+							<span class="version_list_part_label">Greasemonkey</span><span class="version_list_part_value"> 1.15</span>;
+							<span class="version_list_part_label">Windows</span><span class="version_list_part_value"> 7 x64</span>
+						</div>
+						<div class="paragraph version_list">
+							<span class="version_list_part_label">iex</span><span class="version_list_part_value"> 1.0</span>;
+							<span class="version_list_part_label">Chrome</span><span class="version_list_part_value"> 33.0.1750.154 m</span>;
+							<span class="version_list_part_label">Windows</span><span class="version_list_part_value"> 7 x64</span>
+						</div>
+						<div class="paragraph">
+							Compatible with the following extensions:
+						</div>
+						<ul class="paragraph_list">
+							<li>
+								4chan inline extension
+							</li>
+							<li>
+								<a href="https://4chan-x.just-believe.in/" target="_blank">4chan-x</a> / <a href="https://github.com/MayhemYDG/4chan-x" target="_blank">MayhemYDG</a>
+							</li>
+							<li>
+								<a href="https://ihavenoface.github.io/4chan-x/" target="_blank">4chan-x</a> / <a href="https://github.com/ihavenoface/4chan-x" target="_blank">ihavenoface</a>
+							</li>
+							<li>
+								<a href="https://github.com/Spittie/4chan-x/blob/master/README.md" target="_blank">4chan-x</a> / <a href="https://github.com/Spittie/4chan-x" target="_blank">Spittie</a>
+							</li>
+							<li>
+								<a href="https://zixaphir.github.io/appchan-x/" target="_blank">appchan-x</a> / <a href="https://github.com/zixaphir/appchan-x" target="_blank">zixaphir</a>
+							</li>
+						</ul>
+						<div class="paragraph paragraph_small paragraph_dimmer">
+							Last updated: March 30th, 2014
+						</div>
+					</div>
+
+				</div>
+				<div class="section" data-section-name="about/demo">
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-image="demo_image_1.png" data-preview-thumbnail="demo_image_1p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											Using iex, you can hover over a thumbnail and then move the mouse onto the image without it moving or 	disappearing.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-image="demo_image_2.png" data-preview-thumbnail="demo_image_2p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											You can zoom in and out using the mouse wheel, move the mouse to change the view position, and click to close the preview.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-image="demo_image_3.png" data-preview-thumbnail="demo_image_3p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											For users who don't have a mouse wheel, hovering over the <b>zoom%</b> at the top right of the image will display + and &#x2212; buttons.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-image="demo_image_4.png" data-preview-thumbnail="demo_image_4p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											Images are displayed on a dimmed background, making image boundaries and transparent sections more obvious.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-images="demo_image_5a.png,demo_image_5b.png" data-preview-images-change-time="3,3" data-preview-thumbnail="demo_image_5p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											Loading images can be displayed on top of a partially transparent thumbnail.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-images="demo_image_6a.png,demo_image_6b.png" data-preview-images-change-time="3,3" data-preview-thumbnail="demo_image_6p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											By default, the zoom ratio will snap to the horizontal and vertical aspect ratio.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="paragraph">
+						<div class="demo_image_preview_container">
+							<div class="demo_image_preview" data-preview-image="demo_image_7.png" data-preview-thumbnail="demo_image_7p.png" data-preview-thumbnail-resoultion="480x270" data-preview-image-resoultion="854x480">
+								<div class="demo_image_preview_background">
+									<div class="demo_image_preview_background_image"></div>
+									<div class="demo_image_preview_border"></div>
+								</div>
+								<div class="demo_image_preview_overlay"></div>
+								<div class="demo_image_preview_content">
+
+									<div class="vertical_aligned_container"><div class="vertical_aligner"></div><div class="vertical_aligned">
+										<div class="demo_image_preview_text">
+											The mouse cursor can also be set to disappear after inactivity if desired.
+										</div>
+									</div></div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+				<div class="section" data-section-name="changes">
+
+					<div class="changelog"></div>
+					<div class="changelog_error">An error occured acquiring the changelog</div>
+
+				</div>
+				<div class="section" data-section-name="github">
+
+					<div class="paragraph_label"><span class="paragraph_label_text">Source</span>:</div>
+					<div class="paragraph">
+						iex is a stand-alone userscript file written in Javascript with source code is available on <a href="https://github.com/dnsev/iex" target="_blank">github</a>.
+					</div>
+
+					<div class="paragraph_label"><span class="paragraph_label_text">Issues / Features</span>:</div>
+					<div class="paragraph">
+						If you have problems using iex, or want to suggest something for it, file an <a href="https://github.com/dnsev/iex/issues" target="_blank">issue request</a>.
+					</div>
+
+				</div>
+
+			</div>
+
+		</div></div>
+
+	</div>
+
+</div></div>
+
+
+</body>
+</html>
