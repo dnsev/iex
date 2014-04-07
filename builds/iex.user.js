@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     1.0
+// @version     2.0
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -24,7 +24,7 @@
 	var is_firefox = (navigator.userAgent.toString().indexOf("Firefox") >= 0);
 	var is_chrome = (navigator.userAgent.toString().indexOf(" Chrome/") >= 0);
 	var is_opera = !is_firefox && !is_chrome && !(navigator.userAgent.toString().indexOf("MSIE") >= 0);
-	var userscript = {"include":["*://boards.4chan.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"1.0","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
+	var userscript = {"include":["*://boards.4chan.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.0","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
 
 	// Error logging
 	var log_error = function (error_string) {
@@ -1546,12 +1546,16 @@
 						width: 0,
 						height: 0
 					},
+					resolution_thumb: {
+						width: 0,
+						height: 0
+					},
 					size: 0,
 					size_label: "",
 				};
 
 				// Nodes
-				var n, m, n_p, n_file;
+				var n, m, n_p, n_file, style_str;
 
 				n_file = this.post_get_file_info_container(post_container);
 
@@ -1564,12 +1568,14 @@
 							info.filename = n.textContent.trim();
 						}
 						if ((n = n_p.lastChild)) {
-							m = /([0-9\.]+)\s*(\w?b),\s*([0-9]+)x([0-9]+)/i.exec((n.textContent || ""));
+							m = /([0-9\.]+)\s*(\w?b),(?:\s*([0-9]+)x([0-9]+))?/i.exec((n.textContent || ""));
 							if (m) {
 								info.size = parseFloat(m[1]);
 								info.size_label = m[2].toLowerCase();
-								info.resolution.width = parseInt(m[3], 10);
-								info.resolution.height = parseInt(m[4], 10);
+								if (m[3] != null) {
+									info.resolution.width = parseInt(m[3], 10);
+									info.resolution.height = parseInt(m[4], 10);
+								}
 							}
 						}
 					}
@@ -1579,21 +1585,27 @@
 							info.image = n.getAttribute("href") || "";
 
 							if ((n = n.nextSibling)) {
-								m = /([0-9\.]+)\s*(\w?b),\s*([0-9]+)x([0-9]+)/i.exec((n.textContent || ""));
+								m = /([0-9\.]+)\s*(\w?b),(?:\s*([0-9]+)x([0-9]+))?/i.exec((n.textContent || ""));
 								if (m) {
 									info.size = parseFloat(m[1]);
 									info.size_label = m[2].toLowerCase();
-									info.resolution.width = parseInt(m[3], 10);
-									info.resolution.height = parseInt(m[4], 10);
+									if (m[3] != null) {
+										info.resolution.width = parseInt(m[3], 10);
+										info.resolution.height = parseInt(m[4], 10);
+									}
 								}
 							}
 						}
 						if ((n = n_p.querySelector("span"))) {
 							info.filename = n.getAttribute("title") || n.textContent || "";
 						}
+						else {
+							// Spoilers
+							info.filename = n_p.getAttribute("title") || "";
+						}
 					}
 
-					// Spoiler status
+					// Thumbnail and spoiler status
 					if ((n_p = n_file.querySelector(".fileThumb"))) {
 						if ((n = n_p.querySelector("img:not(.full-image):not(.expanded-thumb)"))) {
 							m = n.getAttribute("src");
@@ -1602,6 +1614,17 @@
 							}
 							else {
 								info.thumb = m;
+							}
+
+							// Resolution
+							style_str = n.getAttribute("style");
+							m = /width\s*\:\s*([0-9\.]+)px/i.exec(style_str);
+							if (m) {
+								info.resolution_thumb.width = parseFloat(m[1]) || 0;
+							}
+							m = /height\s*\:\s*([0-9\.]+)px/i.exec(style_str);
+							if (m) {
+								info.resolution_thumb.height = parseFloat(m[1]) || 0;
 							}
 						}
 					}
@@ -1925,6 +1948,16 @@
 						"fit_large_allowed": true,
 						"display_stats": 0
 					},
+					"video": {
+						"autoplay": 1, // 0 = not at all, 1 = asap, 2 = when it can play "through", 3 = fully loaded
+						"loop": true,
+						"mute_initially": false,
+						"volume": 0.5,
+						"mini_controls": 1, // 0 = never, 1 = when mouse is over the video, 2 = when mouse is NOT over the video, 3 = always
+					},
+					"style": {
+						"controls_rounded_border": true
+					}
 				}
 			};
 			this.save_key = "iex_settings";
@@ -3136,6 +3169,63 @@
 				type: "textbox",
 			});
 
+			// Video settings
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "mini_controls" ],
+				label: "Mini Controls",
+				description: "When to display the mini control bar",
+				type: "text",
+				values: [ 0 , 1 , 2 , 3 ],
+				value_labels: [ "never" , "mouse over preview" , "mouse NOT over preview" , "always" ]
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "autoplay" ],
+				label: "Autoplay",
+				description: "When the video should automatically play",
+				type: "text",
+				values: [ 0 , 1 , 2 , 3 ],
+				value_labels: [ "never" , "as soon as possible" , "when it can play \"through\"" , "when fully loaded" ]
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "loop" ],
+				label: "Loop",
+				description: "Enable automatic video looping",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "don't loop" , "loop" ],
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "mute_initially" ],
+				label: "Mute",
+				description: "Mute the video when the preview is opened",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "don't mute" , "mute" ],
+			});
+
+			// Style settings
+			descriptors.push({
+				level: "normal",
+				section: "Style",
+				tree: [ "image_expansion" , "style" , "controls_rounded_border" ],
+				label: "Rounded Borders on Controls",
+				description: "Use rounded corners on video control bars (doesn't work on Chrome)",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "square" , "rounded" ],
+			});
+
 			// Meta
 			descriptors.push({
 				level: "advanced",
@@ -3929,7 +4019,7 @@ body.iex_hide_other_settings #fourchanx-settings{visibility:hidden !important;}\
 .iex_settings_setting_label_subtitle:before{content:"(";}\
 .iex_settings_setting_label_subtitle:after{content:")";}\
 .iex_settings_setting_description{margin-left:0.5em;}\
-.iex_settings_setting_input_container{display:inline-block;white-space:nowrap;}\
+.iex_settings_setting_input_container{display:inline-block;white-space:nowrap;cursor:pointer;}\
 .iex_settings_setting_input_container.iex_settings_setting_input_container_reverse{direction:rtl;}\
 .iex_settings_setting_input_checkbox{vertical-align:middle;}\
 .iex_settings_setting_input_checkbox+.iex_settings_setting_input_label,\
@@ -3983,9 +4073,15 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 .iex_floating_image_offset{display:block;position:relative;}\
 .iex_floating_image_background{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background-color:transparent;background-repeat:no-repeat;background-position:left top;background-size:100% 100%;opacity:0.375;}\
 .iex_floating_image_background.iex_floating_image_background_disabled{visibility:hidden;}\
-.iex_floating_image_background.iex_floating_image_background_hidden{opacity:0;}\
+.iex_floating_image_background.iex_floating_image_background_hidden{display:none;}\
 .iex_floating_image_background.iex_floating_image_background_fallback{opacity:1;}\
 .iex_floating_image_image{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_floating_image_image.iex_floating_image_image_unsized{max-width:100%;max-height:100%;}\
+.iex_floating_image_image.iex_floating_image_image_hidden{display:none;}\
+.iex_floating_image_video{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_floating_image_video.iex_floating_image_video_unsized{max-width:100%;max-height:100%;}\
+.iex_floating_image_video.iex_floating_image_video_hidden{display:none;}\
+.iex_floating_image_video.iex_floating_image_video_not_ready{visibility:hidden;}\
 .iex_floating_image_zoom_border{display:block;position:absolute;border:0.08em solid #ffffff;opacity:0.25;}\
 .iex_floating_image_zoom_border_inner{display:block;position:absolute;border:0.08em solid #000000;left:0;top:0;bottom:0;right:0;}\
 .iex_floating_image_zoom_border.iex_floating_image_zoom_border_hidden{opacity:0;visibility:hidden;}\
@@ -4022,11 +4118,68 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 .iex_floating_image_stats_zoom_control_increase.iex_dark:hover{color:#a0e0ff;}\
 .iex_floating_image_stats_zoom_control_decrease.iex_dark:hover{color:#ffb0a0;}\
 \
+.iex_floating_image_overlay_controls_container{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background:transparent;font-size:1.5em;}\
+.iex_floating_image_overlay_controls_inner_container{display:block;position:absolute;left:0;bottom:0;right:0;padding-top:2em;height:2em;background:transparent;}\
+.iex_floating_image_overlay_controls_table{display:table;width:100%;height:100%;}\
+.iex_floating_image_overlay_controls_table:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important):not(.iex_floating_image_overlay_controls_table_mini){display:none;}\
+.iex_floating_image_overlay_controls_seek_container{display:table-cell;vertical-align:bottom;min-width:1em;}\
+.iex_floating_image_overlay_controls_seek_container2{display:block;width:100%;height:2em;position:relative;}\
+.iex_floating_image_overlay_controls_seek_bar{display:block;position:absolute;left:0;right:0;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
+.iex_floating_image_overlay_controls_seek_bar.iex_floating_image_overlay_controls_no_border_radius{border-radius:0;}\
+.iex_floating_image_overlay_controls_seek_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#c0c0c0;opacity:0.825;}\
+.iex_floating_image_overlay_controls_seek_bar_loaded{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffffff;}\
+.iex_floating_image_overlay_controls_seek_bar_played{position:absolute;left:0;top:0;bottom:0;width:0;background:#66cc33;}\
+.iex_floating_image_overlay_controls_seek_time_table{position:relative;display:table;width:100%;height:100%;font-size:0.625em;}\
+.iex_floating_image_overlay_controls_seek_time_current{display:table-cell;text-align:left;vertical-align:middle;padding:0em 0.25em 0em 0.375em;}\
+.iex_floating_image_overlay_controls_seek_time_duration{display:table-cell;text-align:right;vertical-align:middle;padding:0em 0.375em 0em 0.25em;}\
+.iex_floating_image_overlay_controls_seek_time_current,\
+.iex_floating_image_overlay_controls_seek_time_duration{color:#101010;text-shadow:0em 0.125em 0.125em #ffffff,0em 0.0625em 0.0625em #ffffff;}\
+.iex_floating_image_overlay_controls_buttons_container{display:table-cell;vertical-align:bottom;width:2em;}\
+.iex_floating_image_overlay_controls_buttons_container2{display:block;width:100%;height:2em;position:relative;}\
+.iex_floating_image_overlay_controls_buttons_container_left{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}\
+.iex_floating_image_overlay_controls_buttons_container_right{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}\
+.iex_floating_image_overlay_controls_buttons_container_right_upper{display:block;position:absolute;bottom:100%;right:0;margin-bottom:-0.5em;}\
+.iex_floating_image_overlay_controls_volume_container{width:2em;height:9em;position:relative;}\
+.iex_floating_image_overlay_controls_volume_container:not(.iex_floating_image_overlay_controls_volume_container_visible):not(.iex_floating_image_overlay_controls_volume_container_visible_important){display:none;}\
+.iex_floating_image_overlay_controls_volume_bar{position:absolute;left:0.5em;right:0.5em;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
+.iex_floating_image_overlay_controls_volume_bar.iex_floating_image_overlay_controls_no_border_radius{border-radius:0;}\
+.iex_floating_image_overlay_controls_volume_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#ffffff;opacity:0.825;}\
+.iex_floating_image_overlay_controls_volume_bar_level{position:absolute;left:0;right:0;bottom:0;height:0;background-color:#ffbb50;}\
+\
+.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>.iex_floating_image_overlay_controls_buttons_container{display:none;}\
+.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>.iex_floating_image_overlay_controls_seek_container{min-width:0;}\
+.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>.iex_floating_image_overlay_controls_seek_container2{height:0.125em;}\
+.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>*>.iex_floating_image_overlay_controls_seek_bar{top:0;bottom:0;border-radius:0;border:0em hidden;}\
+.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>*>*>*>.iex_floating_image_overlay_controls_seek_time_table{display:none;}\
+\
+.iex_floating_image_overlay_button_mouse_controller{position:absolute;left:0;top:0;bottom:0;right:0;margin:0.4em;cursor:pointer;}\
+.iex_floating_image_overlay_play_button{display:block;}\
+.iex_floating_image_overlay_play_button.iex_floating_image_overlay_play_button_playing>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_play_icon,\
+.iex_floating_image_overlay_play_button.iex_floating_image_overlay_play_button_playing>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_loop_icon,\
+.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_pause_icon,\
+.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing).iex_floating_image_overlay_play_button_looping>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_play_icon,\
+.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing):not(.iex_floating_image_overlay_play_button_looping)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_loop_icon{visibility:hidden;}\
+.iex_floating_image_overlay_volume_button{display:block;}\
+.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_muted>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_big,\
+.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_muted>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
+.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_muted)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_mute_icon,\
+.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_high>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
+.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_medium)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
+.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_high)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_big{visibility:hidden;}\
+.iex_floating_image_overlay_volume_button_mute_icon{opacity:0.75;}\
+.iex_floating_image_overlay_volume_button_mute_icon_polygon{fill:#000000;}\
+.iex_floating_image_overlay_button_fill{fill:rgba(255,255,255,0.825);stroke:rgba(0,0,0,0.5);stroke-width:1px;vector-effect:non-scaling-stroke;}\
+.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_play_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_button_fill{fill:#44aaff;}\
+.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_volume_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_button_fill{fill:#ff88aa;}\
+.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_volume_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_mute_icon>.iex_floating_image_overlay_volume_button_mute_icon_polygon{fill:#a00000;}\
+\
 .iex_floating_image_zoom_border.iex_floating_image_zoom_border_hidden.iex_animated{transition:opacity 0.5s linear 0s,visibility 0s linear 0.5s;}\
 .iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_hidden).iex_animated{transition:opacity 0.25s linear 0s,visibility 0s linear 0s;}\
 .iex_floating_image_background.iex_animated{transition:opacity 0.5s linear 0s;}\
 				'
 			"";//}
+
+
 
 			// Append style
 			this.stylesheet = document.createElement("style");
@@ -4259,8 +4412,6 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 						this.parse_css_color(this.get_true_style(e, "backgroundColor")),
 					];
 
-					//console.log("bg_colors="+JSON.stringify(bg_colors));
-
 					// Average
 					bg_color = bg_colors[0];
 					for (i = 1; i < bg_colors.length; ++i) {
@@ -4304,14 +4455,16 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			},
 
 			has_class: function (element, classname) {
-				return (new RegExp("(\\s|^)" + classname + "(\\s|$)")).test(element.className)
+				return (new RegExp("(\\s|^)" + classname + "(\\s|$)")).test(element.className);
 			},
 			add_class: function (element, classname) {
 				if (element.classList) {
 					element.classList.add(classname);
 				}
 				else {
-					element.className = (element.className + " " + classname).trim();
+					if (!(new RegExp("(\\s|^)" + classname + "(\\s|$)")).test(element.className)) {
+						element.className = (element.className + " " + classname).trim();
+					}
 				}
 			},
 			remove_class: function (element, classname) {
@@ -4322,7 +4475,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				else {
 					// Regex
 					var reg = new RegExp("(\\s|^)" + classname + "(\\s|$)", "g"),
-						newCls = element.className.replace(reg, "").trim();
+						newCls = element.className.replace(reg, " ").trim();
 
 					if (newCls != element.className) element.className = newCls;
 				}
@@ -4340,15 +4493,48 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				}
 				else {
 					// Regex
-					var reg, newCls;
+					var newCls = element.className,
+						reg;
 
 					for (i = 0; i < classnames.length; ++i) {
 						reg = new RegExp("(\\s|^)" + classnames[i] + "(\\s|$)", "g");
-						newCls = element.className.replace(reg, "").trim();
-
-						if (newCls != element.className) element.className = newCls;
+						newCls = newCls.replace(reg, " ").trim();
 					}
+
+					if (newCls != element.className) element.className = newCls;
 				}
+			},
+
+			has_class_svg: function (element, classname) {
+				return (new RegExp("(\\s|^)" + classname + "(\\s|$)")).test(element.getAttribute("class"));
+			},
+			add_class_svg: function (element, classname) {
+				if (!(new RegExp("(\\s|^)" + classname + "(\\s|$)")).test(element.getAttribute("class"))) {
+					element.setAttribute("class", (element.getAttribute("class") + " " + classname).trim());
+				}
+			},
+			remove_class_svg: function (element, classname) {
+				// Regex
+				var reg = new RegExp("(\\s|^)" + classname + "(\\s|$)", "g"),
+					oldCls = element.getAttribute("class"),
+					newCls = oldCls.replace(reg, " ").trim();
+
+				if (newCls != oldCls) element.setAttribute("class", newCls);
+			},
+			remove_classes_svg: function (element, classnames) {
+				var oldCls = element.getAttribute("class"),
+					newCls = oldCls,
+					i, reg;
+
+				// Split
+				classnames = classnames.split(" ");
+
+				for (i = 0; i < classnames.length; ++i) {
+					reg = new RegExp("(\\s|^)" + classnames[i] + "(\\s|$)", "g");
+					newCls = newCls.replace(reg, " ").trim();
+				}
+
+				if (newCls != oldCls) element.setAttribute("class", newCls);
 			},
 
 			get_true_style_of_class: function (class_name, style_name, tag_name, parent_node) {
@@ -4692,9 +4878,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			this.disabled = false;
 
 			// Extension settings
+			this.extensions_valid = [ ".jpg" , ".jpeg" , ".png" , ".gif" , ".webm" ];
+			this.extensions_video = [ ".webm" ];
 			this.extensions_display_bg = {
 				".jpg": true,
 				".jpeg": true,
+				".webm": true
 			};
 
 			// Events
@@ -4714,6 +4903,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			settings.on_change(["image_expansion", "hover", "header_overlap"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "hover", "fit_large_allowed"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "hover", "display_stats"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "autoplay"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "loop"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "mute_initially"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "volume"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "mini_controls"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "style", "controls_rounded_border"], this.on_settings_value_change_bind);
 
 			// Close
 			this.preview_open_timer = null;
@@ -4734,6 +4929,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				mouse_x: 0.0,
 				mouse_y: 0.0,
 				padding_active: false,
+				type: TYPE_NONE,
 				size: {
 					width: 0,
 					height: 0,
@@ -4746,6 +4942,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					width: 0,
 					height: 0,
 				},
+				size_acquired: false,
 
 				fit_large_allowed: true,
 				display_stats: true,
@@ -4777,9 +4974,25 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					right: 20,
 					bottom: 20
 				},
+				video: {
+					autoplay: 1, // 0 = not at all, 1 = asap, 2 = when it can play "through", 3 = fully loaded
+					loop: true,
+					mute_initially: false,
+					volume: 0.5,
+					mini_controls: 1, // 0 = never, 1 = when mouse is over the video, 2 = when mouse is NOT over the video, 3 = always
+				},
+				style: {
+					controls_rounded_border: true,
+				},
 			};
 			ASAP.asap(on_asap.bind(this), on_asap_condition);
 		};
+
+
+
+		var TYPE_NONE = 0;
+		var TYPE_IMAGE = 1;
+		var TYPE_VIDEO = 2;
 
 
 
@@ -4884,6 +5097,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			// Show zoom borders and mouse
 			if (this.settings.zoom_border_show) show_zoom_border.call(this, false);
 			show_mouse.call(this, !this.settings.mouse_hide);
+
+			// Mini controls
+			if (this.settings.type == TYPE_VIDEO) {
+				if (this.settings.video.mini_controls == 1) set_video_mini_controls_enabled.call(this, true);
+				else if (this.settings.video.mini_controls == 2) set_video_mini_controls_enabled.call(this, false);
+			}
 		};
 		var on_preview_mouseleave = function (node, data, event) {
 			// Activate close
@@ -4897,6 +5116,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			if (this.settings.padding_active) {
 				// Remove
 				hide_paddings.call(this);
+			}
+
+			// Mini controls
+			if (this.settings.type == TYPE_VIDEO) {
+				if (this.settings.video.mini_controls == 1) set_video_mini_controls_enabled.call(this, false);
+				else if (this.settings.video.mini_controls == 2) set_video_mini_controls_enabled.call(this, true);
 			}
 		};
 		var on_preview_mousedown = function (event) {
@@ -4952,18 +5177,35 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			show_mouse.call(this, !this.settings.mouse_hide);
 		};
 		var on_preview_image_load = function (event) {
+			if (this.settings.type != TYPE_IMAGE) return;
+
 			// Hide background image
-			var nodes = this.image_data.nodes;
+			var nodes = this.image_data.nodes,
+				set = this.settings,
+				w = nodes.image.naturalWidth,
+				h = nodes.image.naturalHeight;
+
 			style.add_class(nodes.background, "iex_floating_image_background_hidden");
+
+
+			// Update size
+			if (!set.size_acquired || (set.size.width != w || set.size.height != h)) {
+				update_preview_size.call(this, w, h);
+				style.remove_class(nodes.image, "iex_floating_image_image_unsized");
+			}
 		};
 		var on_preview_image_error = function (event) {
+			if (this.settings.type != TYPE_IMAGE) return;
+
 			// Show fallback
 			var nodes = this.image_data.nodes,
 				stats = nodes.stats;
 			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
 			style.add_class(nodes.background, "iex_floating_image_background_fallback");
+			style.add_class(nodes.image, "iex_floating_image_i_hidden");
+			nodes.image.removeAttribute("src");
 
-			// TODO : Archive check, eventually
+			// Archive check, eventually
 
 			// Modify status
 			stats.status[0].textContent = "Error";
@@ -5026,10 +5268,365 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 		var on_window_resize = function (event) {
 			// Reposition
 			this.preview_update(false, false, false);
+
+			// Update bar position
+			if (this.image_data.state.video.mouse_capturing_element !== null) {
+				update_video_mouse_capture.call(this);
+			}
 		};
 		var on_window_scroll = function (event) {
 			// Reposition
 			this.preview_update(false, false, false);
+
+			// Update bar position
+			if (this.image_data.state.video.mouse_capturing_element !== null) {
+				update_video_mouse_capture.call(this);
+			}
+		};
+
+		var on_preview_video_loadedmetadata = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			var set = this.settings,
+				v_set = set.video,
+				nodes = this.image_data.nodes,
+				video = nodes.video,
+				w = video.videoWidth,
+				h = video.videoHeight;
+
+
+			// Update seek bar
+			update_video_duration_status.call(this);
+			update_video_seek_status.call(this, 0);
+
+			// Hide background image and un-hide video
+			style.remove_class(video, "iex_floating_image_video_not_ready");
+			style.add_class(nodes.background, "iex_floating_image_background_hidden");
+
+			// Update size
+			if (!set.size_acquired || (set.size.width != w || set.size.height != h)) {
+				update_preview_size.call(this, w, h);
+				style.remove_class(nodes.video, "iex_floating_image_video_unsized");
+			}
+		};
+		var on_preview_video_canplay = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			var v_set = this.settings.video,
+				nodes = this.image_data.nodes;
+
+			// Auto-play
+			if (v_set.autoplay == 1 && nodes.video.paused && !this.image_data.state.video.interacted) {
+				set_video_paused.call(this, false);
+			}
+		};
+		var on_preview_video_canplaythrough = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			var v_set = this.settings.video,
+				nodes = this.image_data.nodes;
+
+			// Auto-play
+			if (v_set.autoplay == 2 && nodes.video.paused && !this.image_data.state.video.interacted) {
+				set_video_paused.call(this, false);
+			}
+		};
+		var on_preview_video_progress = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			var v_set = this.settings.video,
+				nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				percent = (video.buffered.end(0) / video.duration);
+
+			// Update progress bar
+			v_nodes.load_progress.style.width = (percent * 100).toFixed(2) + "%";
+
+			// Autoplay
+			if (v_set.autoplay == 3 && video.paused && percent >= 1.0 && !this.image_data.state.video.interacted) {
+				set_video_paused.call(this, false);
+			}
+		};
+		var on_preview_video_error = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			// Show fallback
+			var nodes = this.image_data.nodes,
+				stats = nodes.stats;
+			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
+			style.add_class(nodes.background, "iex_floating_image_background_fallback");
+			style.add_class(nodes.video, "iex_floating_image_video_hidden");
+
+			// Archive check, eventually
+
+			// Modify status
+			stats.status[0].textContent = "Error";
+			style.add_class(stats.status[0], "iex_floating_image_stats_status_error");
+			style.remove_class(stats.status[0], "iex_floating_image_stats_hidden");
+			style.remove_class(stats.status[1], "iex_floating_image_stats_hidden");
+		};
+		var on_preview_video_abort = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			// Show fallback
+			var nodes = this.image_data.nodes,
+				stats = nodes.stats;
+			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
+			style.add_class(nodes.background, "iex_floating_image_background_fallback");
+			style.add_class(nodes.video, "iex_floating_image_video_hidden");
+			nodes.video.removeAttribute("src");
+
+			// Archive check, eventually
+
+			// Modify status
+			stats.status[0].textContent = "Abort";
+			style.add_class(stats.status[0], "iex_floating_image_stats_status_error");
+			style.remove_class(stats.status[0], "iex_floating_image_stats_hidden");
+			style.remove_class(stats.status[1], "iex_floating_image_stats_hidden");
+		};
+		var on_preview_video_timeupdate = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			// Update time progress
+			var video = this.image_data.nodes.video;
+			update_video_seek_status.call(this, video.currentTime);
+		};
+		var on_preview_video_ended = function (event) {
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			// Update buttons
+			var video = this.image_data.nodes.video;
+			update_video_play_status.call(this, video.paused);
+		};
+
+		var on_preview_controls_mouseenter = function (node, data, event) {
+			// Do not show for non-video
+			if (this.settings.type != TYPE_VIDEO) return;
+
+			// Show controls
+			var v_nodes = this.image_data.nodes.video_nodes;
+
+			style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
+			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
+		};
+		var on_preview_controls_mouseleave = function (node, data, event) {
+			// Hide controls
+			var v_nodes = this.image_data.nodes.video_nodes;
+
+			style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
+		};
+		var on_preview_controls_container_mousedown = function (event) {
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+
+			// Ignore if not left mb
+			if (button != 1) return;
+
+			// Stop event
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_preview_controls_play_button_click = function (event) {
+			// Play/pause
+			var video = this.image_data.nodes.video;
+
+			set_video_paused.call(this, !video.paused, (event.shiftKey && video.paused) ? (!video.loop) : undefined);
+		};
+		var on_preview_controls_volume_button_click = function (event) {
+			// Mute/unmute
+			set_video_muted.call(this, !this.image_data.nodes.video.muted);
+		};
+		var on_preview_controls_volume_button_mouseenter = function (node, data, event) {
+			// Show volume bar
+			var v_nodes = this.image_data.nodes.video_nodes;
+
+			style.add_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
+		};
+		var on_preview_controls_volume_button_container_mouseleave = function (node, data, event) {
+			// Hide volume bar
+			var v_nodes = this.image_data.nodes.video_nodes;
+
+			style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
+		};
+		var on_preview_controls_seek_bar_mousedown = function (event) {
+			// Get the mouse button
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+			if (button != 1) return;
+
+			// Begin seeking
+			var v_state = this.image_data.state.video,
+				nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes;
+
+			// Set paused state
+			v_state.seeking_paused = video.paused;
+			if (!video.paused) video.pause();
+			v_state.seeking = true;
+
+			// Force visibility
+			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
+
+			// Setup window mousemove and mouseup events
+			setup_video_mouse_capture.call(this);
+
+			// Initial update
+			on_preview_controls_capture_mousemove.call(this, event);
+
+			// Stop
+			event.stopPropagation();
+			event.preventDefault();
+			return false;
+		};
+		var on_preview_controls_volume_bar_mousedown = function (event) {
+			// Get the mouse button
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+			if (button != 1) return;
+
+			// Begin volume changing
+			var v_state = this.image_data.state.video,
+				nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes;
+
+			// Set paused state
+			v_state.volume_modifying = true;
+
+			// Force visibility
+			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
+			style.add_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
+
+			// Setup window mousemove and mouseup events
+			setup_video_mouse_capture.call(this);
+
+			// Initial update
+			on_preview_controls_capture_mousemove.call(this, event);
+
+			// Stop
+			event.stopPropagation();
+			event.preventDefault();
+			return false;
+		};
+		var on_preview_controls_prevent_default_mousedown = function (event) {
+			event.preventDefault();
+			return false;
+		};
+
+		var on_preview_controls_capture_mousemove = function (event) {
+			// Begin seeking
+			var v_state = this.image_data.state.video,
+				nodes = this.image_data.nodes,
+				v_nodes = nodes.video_nodes,
+				video = nodes.video,
+				x, y;
+
+
+			// Get mouse x/y
+			if (event.pageX == null && (event = event || window.event).clientX != null) {
+				var html = document.documentElement, body = document.body;
+				if (html && body) {
+					x = ((event.clientX || 0) + (html.scrollLeft || (body && body.scrollLeft) || 0)) - (html.clientLeft || 0);
+					y = ((event.clientY || 0) + (html.scrollTop || (body && body.scrollTop) || 0)) - (html.clientTop || 0);
+				}
+			}
+			else {
+				x = event.pageX || 0;
+				y = event.pageY || 0;
+			}
+
+
+			// Set paused state
+			if (v_state.seeking) {
+				var duration = video.duration;
+				if (!isNaN(duration)) {
+					var loaded = video.buffered.end(0) / duration;
+
+					// Get percent
+					var percent = (x - v_state.bar_rect.left) / (v_state.bar_rect.right - v_state.bar_rect.left);
+
+					// Bound
+					if (percent < 0) percent = 0;
+					else if (percent > loaded) percent = loaded;
+
+					// Apply
+					percent *= duration;
+					video.currentTime = percent;
+					update_video_seek_status.call(this, percent);
+				}
+			}
+			else if (v_state.volume_modifying) {
+				// Get percent
+				var percent = 1.0 - (y - v_state.bar_rect.top) / (v_state.bar_rect.bottom - v_state.bar_rect.top);
+
+				// Bound
+				if (percent < 0) percent = 0;
+				else if (percent > loaded) percent = loaded;
+
+				// Set volume
+				set_video_volume.call(this, percent, false, false);
+			}
+		};
+		var on_preview_controls_capture_mouseup = function (event) {
+			var v_state = this.image_data.state.video,
+				nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes;
+
+			if (v_state.seeking) {
+				// Unpause
+				if (!v_state.seeking_paused) video.play();
+
+				// Un-force visibility
+				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
+
+				// Done
+				v_state.seeking = false;
+			}
+			else if (v_state.volume_modifying) {
+				// Save volume
+				set_video_volume.call(this, -1, true, true);
+
+				// Un-force visibility
+				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
+				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
+
+				// Done
+				v_state.volume_modifying = false;
+			}
+
+			// Stop capture
+			teardown_video_mouse_capture.call(this);
 		};
 
 		var on_hotkey = function (event, hotkey) {
@@ -5084,8 +5681,19 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 		};
 
 
+
 		var log2 = function (x) {
 			return Math.log(x) / Math.LN2;
+		};
+
+		var format_video_time = function (time) {
+			time = Math.floor(time + 0.5);
+
+			var s = (time % 60).toString();
+			if (s.length < 2) s = "0" + s;
+
+			time = Math.floor(time / 60);
+			return time + ":" + s;
 		};
 
 		var preview_open_test = function (image_container, post_container, obey_timer) {
@@ -5100,6 +5708,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			var val_check = settings.values["image_expansion"][info.spoiler === null ? "normal" : "spoiler"];
 			if (!val_check["enabled"]) return;
 
+			// Extension check
+			var ext = /\.[^\.]+$/.exec(info.image);
+			ext = ext ? ext[0].toLowerCase() : "";
+			if (this.extensions_valid.indexOf(ext) < 0) return;
+
 			// Open preview
 			var time = val_check["timeout"];
 			if (time == 0 || !obey_timer) {
@@ -5110,6 +5723,57 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					clearTimeout(this.preview_open_timer);
 				}
 				this.preview_open_timer = setTimeout(on_preview_open_timeout.bind(this, image_container, info, val_check["to_fit"]), time * 1000);
+			}
+		};
+		var preview_reset = function () {
+			var nodes = this.image_data.nodes,
+				stats = nodes.stats,
+				set = this.settings,
+				ani = "",
+				type = set.type;
+
+			// Not visible
+			this.image_visible = false;
+			set.type = TYPE_NONE;
+
+			// Hide
+			style.remove_class(nodes.container, "iex_floating_image_container_visible");
+			style.remove_class(nodes.connector, "iex_floating_image_connector_visible");
+			nodes.background.style.backgroundImage = "";
+
+			// Class resetting
+			nodes.padding.className = "iex_floating_image_padding" + ani + style.theme;
+			nodes.overflow.className = "iex_floating_image_overflow" + style.theme;
+			nodes.background.className = "iex_floating_image_background" + ani + style.theme;
+			nodes.zoom_border.className = "iex_floating_image_zoom_border iex_floating_image_zoom_border_hidden" + ani + style.theme
+
+			// Hide status
+			style.add_class(stats.status[0], "iex_floating_image_stats_hidden");
+			style.add_class(stats.status[1], "iex_floating_image_stats_hidden");
+			style.remove_classes(stats.status[0], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
+			style.remove_classes(stats.status[1], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
+			stats.status[0].textContent = "";
+
+			// Remove media
+			if (type == TYPE_IMAGE) {
+				nodes.image.removeAttribute("src");
+				style.add_class(nodes.image, "iex_floating_image_image_hidden");
+				style.remove_class(nodes.image, "iex_floating_image_image_unsized");
+			}
+			else if (type == TYPE_VIDEO) {
+				var v_nodes = nodes.video_nodes;
+
+				// Hide controls
+				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
+				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
+				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
+				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
+				set_video_mini_controls_enabled.call(this, false);
+
+				nodes.video.removeAttribute("src");
+				style.add_class(nodes.video, "iex_floating_image_video_hidden");
+				style.remove_class(nodes.video, "iex_floating_image_video_unsized");
+				nodes.video.load();
 			}
 		};
 
@@ -5134,9 +5798,16 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			}
 		};
 
+		var addEventListenerManaged = function (list, node, event, callback, capture) {
+			node.addEventListener(event, callback, capture);
+			list.push([ node , event , callback , capture ]);
+		};
+
 		var create_new_image_preview = function () {
 			// Create the preview container
-			var c, c_pad, c_over, c_offset, c_bg, c_img, c_stats, c_zoom_border1, c_zoom_border2, c_stat_i, c_stat_zoom_controls, c_stat_zoom_inc, c_stat_zoom_dec, c_stat_zoom, c_stat_zoom_fit, c_stat_res, c_stat_status1, c_stat_status2, c_stat_size, c_stat_name, c_connector;
+			var c, c_pad, c_over, c_offset, c_bg, c_img, c_stats, c_zoom_border1, c_zoom_border2,
+				c_stat_i, c_stat_zoom_controls, c_stat_zoom_inc, c_stat_zoom_dec, c_stat_zoom, c_stat_zoom_fit,
+				c_stat_res, c_stat_status1, c_stat_status2, c_stat_size, c_stat_name, c_connector, w, h, events = [];
 
 			c = document.createElement("div");
 			c.className = "iex_floating_image_container" + style.theme;
@@ -5163,14 +5834,14 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 			// Image
 			c_img = document.createElement("img");
-			c_img.className = "iex_floating_image_image" + style.theme;
+			c_img.className = "iex_floating_image_image iex_floating_image_image_hidden" + style.theme;
 			c_img.setAttribute("alt", "");
 			c_img.setAttribute("title", "");
 			c_offset.appendChild(c_img);
 
 			// Zoom borders
-			var w = (this.settings.zoom_margins.horizontal * 100).toFixed(2) + "%",
-				h = (this.settings.zoom_margins.vertical * 100).toFixed(2) + "%";
+			w = (this.settings.zoom_margins.horizontal * 100).toFixed(2) + "%";
+			h = (this.settings.zoom_margins.vertical * 100).toFixed(2) + "%";
 			c_zoom_border1 = document.createElement("div");
 			c_zoom_border1.className = "iex_floating_image_zoom_border iex_floating_image_zoom_border_hidden" + style.theme;
 			c_zoom_border1.style.left = w;
@@ -5255,55 +5926,54 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 
 			// Events
-			var on_connector_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseenter , null ]);
-			var on_connector_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseleave , null ]);
-			var on_preview_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseenter , null ]);
-			var on_preview_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseleave , null ]);
-			var on_preview_mousewheel_bind = on_preview_mousewheel.bind(this);
-			var on_preview_mousemove_bind = on_preview_mousemove.bind(this);
-			var on_preview_mousedown_bind = on_preview_mousedown.bind(this);
-			var on_preview_contextmenu_bind = on_preview_contextmenu.bind(this);
-			var on_preview_image_load_bind = on_preview_image_load.bind(this);
-			var on_preview_image_error_bind = on_preview_image_error.bind(this);
-			var on_preview_overflow_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_overflow_mouseenter , null ]);
-			var on_window_resize_bind = on_window_resize.bind(this);
-			var on_window_scroll_bind = on_window_scroll.bind(this);
+			var on_connector_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseenter , null ]),
+				on_connector_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseleave , null ]),
+				on_preview_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseenter , null ]),
+				on_preview_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseleave , null ]),
+				on_preview_mousewheel_bind = on_preview_mousewheel.bind(this),
+				on_preview_mousemove_bind = on_preview_mousemove.bind(this),
+				on_preview_mousedown_bind = on_preview_mousedown.bind(this),
+				on_preview_contextmenu_bind = on_preview_contextmenu.bind(this),
+				on_preview_image_load_bind = on_preview_image_load.bind(this),
+				on_preview_image_error_bind = on_preview_image_error.bind(this),
+				on_preview_overflow_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_overflow_mouseenter , null ]),
+				on_window_resize_bind = on_window_resize.bind(this),
+				on_window_scroll_bind = on_window_scroll.bind(this),
 
-			var on_preview_stats_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseenter , null ]);
-			var on_preview_stats_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseleave , null ]);
-			var on_preview_stats_zoom_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_mouseenter , null ]);
-			var on_preview_stats_zoom_controls_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseenter , null ]);
-			var on_preview_stats_zoom_controls_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseleave , null ]);
-			var on_preview_stats_zoom_controls_mousedown_bind = on_preview_stats_zoom_controls_mousedown.bind(this);
-			var on_preview_stats_zoom_control_click_increase_bind = on_preview_stats_zoom_control_click.bind(this, 1);
-			var on_preview_stats_zoom_control_click_decrease_bind = on_preview_stats_zoom_control_click.bind(this, -1);
+				on_preview_stats_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseenter , null ]),
+				on_preview_stats_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseleave , null ]),
+				on_preview_stats_zoom_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_mouseenter , null ]),
+				on_preview_stats_zoom_controls_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseenter , null ]),
+				on_preview_stats_zoom_controls_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseleave , null ]),
+				on_preview_stats_zoom_controls_mousedown_bind = on_preview_stats_zoom_controls_mousedown.bind(this),
+				on_preview_stats_zoom_control_click_increase_bind = on_preview_stats_zoom_control_click.bind(this, 1),
+				on_preview_stats_zoom_control_click_decrease_bind = on_preview_stats_zoom_control_click.bind(this, -1);
 
+			addEventListenerManaged(events, c_connector, "mouseover", on_connector_mouseenter_bind, false);
+			addEventListenerManaged(events, c_connector, "mouseout", on_connector_mouseleave_bind, false);
+			addEventListenerManaged(events, c_connector, "mousedown", on_preview_mousedown_bind, false);
+			addEventListenerManaged(events, c, "mouseover", on_preview_mouseenter_bind, false);
+			addEventListenerManaged(events, c, "mouseout", on_preview_mouseleave_bind, false);
+			addEventListenerManaged(events, c, "mousemove", on_preview_mousemove_bind, false);
+			addEventListenerManaged(events, c, "mousewheel", on_preview_mousewheel_bind, false);
+			addEventListenerManaged(events, c, "DOMMouseScroll", on_preview_mousewheel_bind, false);
+			addEventListenerManaged(events, c, "mousedown", on_preview_mousedown_bind, false);
+			addEventListenerManaged(events, c, "contextmenu", on_preview_contextmenu_bind, false);
+			addEventListenerManaged(events, c_img, "load", on_preview_image_load_bind, false);
+			addEventListenerManaged(events, c_img, "error", on_preview_image_error_bind, false);
+			addEventListenerManaged(events, c_over, "mouseover", on_preview_overflow_mouseenter_bind, false);
 
-			c_connector.addEventListener("mouseover", on_connector_mouseenter_bind, false);
-			c_connector.addEventListener("mouseout", on_connector_mouseleave_bind, false);
-			c_connector.addEventListener("mousedown", on_preview_mousedown_bind, false);
-			c.addEventListener("mouseover", on_preview_mouseenter_bind, false);
-			c.addEventListener("mouseout", on_preview_mouseleave_bind, false);
-			c.addEventListener("mousemove", on_preview_mousemove_bind, false);
-			c.addEventListener("mousewheel", on_preview_mousewheel_bind, false);
-			c.addEventListener("DOMMouseScroll", on_preview_mousewheel_bind, false);
-			c.addEventListener("mousedown", on_preview_mousedown_bind, false);
-			c.addEventListener("contextmenu", on_preview_contextmenu_bind, false);
-			c_img.addEventListener("load", on_preview_image_load_bind, false);
-			c_img.addEventListener("error", on_preview_image_error_bind, false);
-			c_over.addEventListener("mouseover", on_preview_overflow_mouseenter_bind, false);
+			addEventListenerManaged(events, c_stats, "mouseover", on_preview_stats_mouseenter_bind, false);
+			addEventListenerManaged(events, c_stats, "mouseout", on_preview_stats_mouseleave_bind, false);
+			addEventListenerManaged(events, c_stat_zoom, "mouseover", on_preview_stats_zoom_mouseenter_bind, false);
+			addEventListenerManaged(events, c_stat_zoom_controls, "mousedown", on_preview_stats_zoom_controls_mousedown_bind, false);
+			addEventListenerManaged(events, c_stat_zoom_controls, "mouseover", on_preview_stats_zoom_controls_mouseenter_bind, false);
+			addEventListenerManaged(events, c_stat_zoom_controls, "mouseout", on_preview_stats_zoom_controls_mouseleave_bind, false);
+			addEventListenerManaged(events, c_stat_zoom_inc, "click", on_preview_stats_zoom_control_click_increase_bind, false);
+			addEventListenerManaged(events, c_stat_zoom_dec, "click", on_preview_stats_zoom_control_click_decrease_bind, false);
 
-			c_stats.addEventListener("mouseover", on_preview_stats_mouseenter_bind, false);
-			c_stats.addEventListener("mouseout", on_preview_stats_mouseleave_bind, false);
-			c_stat_zoom.addEventListener("mouseover", on_preview_stats_zoom_mouseenter_bind, false);
-			c_stat_zoom_controls.addEventListener("mousedown", on_preview_stats_zoom_controls_mousedown_bind, false);
-			c_stat_zoom_controls.addEventListener("mouseover", on_preview_stats_zoom_controls_mouseenter_bind, false);
-			c_stat_zoom_controls.addEventListener("mouseout", on_preview_stats_zoom_controls_mouseleave_bind, false);
-			c_stat_zoom_inc.addEventListener("click", on_preview_stats_zoom_control_click_increase_bind, false);
-			c_stat_zoom_dec.addEventListener("click", on_preview_stats_zoom_control_click_decrease_bind, false);
-
-			window.addEventListener("resize", on_window_resize_bind, false);
-			window.addEventListener("scroll", on_window_scroll_bind, false);
+			addEventListenerManaged(events, window, "resize", on_window_resize_bind, false);
+			addEventListenerManaged(events, window, "scroll", on_window_scroll_bind, false);
 
 
 			// Append
@@ -5320,6 +5990,8 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					offset: c_offset,
 					background: c_bg,
 					image: c_img,
+					video: null,
+					video_nodes: null,
 					zoom_border: c_zoom_border1,
 					stats: {
 						container: c_stats,
@@ -5337,35 +6009,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					},
 					connector: c_connector,
 				},
-				events: {
-					on_connector_mouseenter_bind: on_connector_mouseenter_bind,
-					on_connector_mouseleave_bind: on_connector_mouseleave_bind,
-					on_preview_mouseenter_bind: on_preview_mouseenter_bind,
-					on_preview_mouseleave_bind: on_preview_mouseleave_bind,
-					on_preview_mousemove_bind: on_preview_mousemove_bind,
-					on_preview_mousewheel_bind: on_preview_mousewheel_bind,
-					on_preview_mousedown_bind: on_preview_mousedown_bind,
-					on_preview_image_load_bind: on_preview_image_load,
-					on_preview_image_error_bind: on_preview_image_error,
-					on_preview_contextmenu_bind: on_preview_contextmenu_bind,
-					on_preview_overflow_mouseenter_bind: on_preview_overflow_mouseenter_bind,
-
-					on_preview_stats_mouseenter_bind: on_preview_stats_mouseenter_bind,
-					on_preview_stats_mouseleave_bind: on_preview_stats_mouseleave_bind,
-					on_preview_stats_zoom_mouseenter_bind: on_preview_stats_zoom_mouseenter_bind,
-					on_preview_stats_zoom_controls_mouseenter_bind: on_preview_stats_zoom_controls_mouseenter_bind,
-					on_preview_stats_zoom_controls_mouseleave_bind: on_preview_stats_zoom_controls_mouseleave_bind,
-					on_preview_stats_zoom_controls_mousedown_bind: on_preview_stats_zoom_controls_mousedown_bind,
-					on_preview_stats_zoom_control_click_increase_bind: on_preview_stats_zoom_control_click_increase_bind,
-					on_preview_stats_zoom_control_click_decrease_bind: on_preview_stats_zoom_control_click_decrease_bind,
-
-					on_window_resize_bind: on_window_resize_bind,
-					on_window_scroll_bind: on_window_scroll_bind,
-
+				events: events,
+				bindings: {
 					on_hide_zoom_border_timeout_bind: hide_zoom_border.bind(this, true),
 					on_hide_mouse_timeout_bind: hide_mouse.bind(this, true),
 					on_hide_zoom_controls_timeout_bind: hide_zoom_controls.bind(this, true, false),
-
 				},
 				timers: {
 					zoom_border: null,
@@ -5374,10 +6022,293 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				},
 				state: {
 					mouse_in_stats: false,
+					video: null
 				},
 			};
+
 			// Return
+			add_video_to_image_preview.call(this, obj);
 			return obj;
+		};
+		var add_video_to_image_preview = function (data) {
+			var nodes = data.nodes,
+				events = data.events,
+				svgns = "http://www.w3.org/2000/svg",
+				c_video, c_overlay, c_padding, c_div1, c_div2, c_div3, c_div4, svg_e1, svg_e2, c_container, c_buttons_left, c_buttons_right,
+				c_seek_container, c_load_progress, c_play_progress, c_volume_progress, c_volume_container, svg_play, svg_volume, c_play_button,
+				c_volume_button, c_seek_bar, c_volume_bar, c_time_current, c_time_duration;
+
+			// Video
+			c_video = document.createElement("video");
+			c_video.className = "iex_floating_image_video iex_floating_image_video_hidden" + style.theme;
+
+
+
+			// Controller overlay
+			c_overlay = document.createElement("div");
+			c_overlay.className = "iex_floating_image_overlay_controls_container" + style.theme;
+
+			c_padding = document.createElement("div");
+			c_padding.className = "iex_floating_image_overlay_controls_inner_container" + style.theme;
+			c_overlay.appendChild(c_padding);
+
+			c_container = document.createElement("div");
+			c_container.className = "iex_floating_image_overlay_controls_table" + style.theme;
+			c_padding.appendChild(c_container);
+
+
+
+			// Pause/play button
+			c_buttons_left = document.createElement("div");
+			c_buttons_left.className = "iex_floating_image_overlay_controls_buttons_container" + style.theme;
+			c_container.appendChild(c_buttons_left);
+
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_floating_image_overlay_controls_buttons_container2" + style.theme;
+			c_buttons_left.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_left" + style.theme;
+			c_div1.appendChild(c_div2);
+
+			// Mouse event controller
+			c_play_button = document.createElement("div");
+			c_play_button.className = "iex_floating_image_overlay_button_mouse_controller" + style.theme;
+			c_div2.appendChild(c_play_button);
+
+			// SVG image
+			svg_play = document.createElementNS(svgns, "svg");
+			svg_play.setAttribute("class", "iex_floating_image_overlay_play_button");
+			svg_play.setAttribute("svgns", svgns);
+			svg_play.setAttribute("width", "2em");
+			svg_play.setAttribute("height", "2em");
+			svg_play.setAttribute("viewBox", "0 0 1 1");
+			c_div2.appendChild(svg_play);
+
+			svg_e1 = document.createElementNS(svgns, "g");
+			svg_e1.setAttribute("class", "iex_floating_image_overlay_button_scale_group");
+			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
+			svg_play.appendChild(svg_e1);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_play_icon iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0,0 0,1 1,0.5");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_loop_icon iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0.1,0.05 1,0.5 0.1,0.95");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_loop_icon iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0,0.7 0.4,0.5 0,0.3");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_pause_icon iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0.125,0 0.375,0 0.375,1 0.125,1");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_pause_icon iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0.625,0 0.875,0 0.875,1 0.625,1");
+			svg_e1.appendChild(svg_e2);
+
+
+
+			// Seek bar
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_floating_image_overlay_controls_seek_container" + style.theme;
+			c_container.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_floating_image_overlay_controls_seek_container2" + style.theme;
+			c_div1.appendChild(c_div2);
+
+			c_seek_bar = document.createElement("div");
+			c_seek_bar.className = "iex_floating_image_overlay_controls_seek_bar" + style.theme;
+			c_div2.appendChild(c_seek_bar);
+
+			c_div3 = document.createElement("div");
+			c_div3.className = "iex_floating_image_overlay_controls_seek_bar_bg" + style.theme;
+			c_seek_bar.appendChild(c_div3);
+
+			c_load_progress = document.createElement("div");
+			c_load_progress.className = "iex_floating_image_overlay_controls_seek_bar_loaded" + style.theme;
+			c_div3.appendChild(c_load_progress);
+
+			c_play_progress = document.createElement("div");
+			c_play_progress.className = "iex_floating_image_overlay_controls_seek_bar_played" + style.theme;
+			c_div3.appendChild(c_play_progress);
+
+			c_div4 = document.createElement("div");
+			c_div4.className = "iex_floating_image_overlay_controls_seek_time_table" + style.theme;
+			c_div3.appendChild(c_div4);
+
+			c_time_current = document.createElement("div");
+			c_time_current.className = "iex_floating_image_overlay_controls_seek_time_current" + style.theme;
+			c_div4.appendChild(c_time_current);
+
+			c_time_duration = document.createElement("div");
+			c_time_duration.className = "iex_floating_image_overlay_controls_seek_time_duration" + style.theme;
+			c_div4.appendChild(c_time_duration);
+
+
+
+			// Volume bar/mute button
+			c_buttons_right = document.createElement("div");
+			c_buttons_right.className = "iex_floating_image_overlay_controls_buttons_container" + style.theme;
+			c_container.appendChild(c_buttons_right);
+
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_floating_image_overlay_controls_buttons_container2" + style.theme;
+			c_buttons_right.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_right" + style.theme;
+			c_div1.appendChild(c_div2);
+
+			// Mouse event controller
+			c_volume_button = document.createElement("div");
+			c_volume_button.className = "iex_floating_image_overlay_button_mouse_controller" + style.theme;
+			c_div2.appendChild(c_volume_button);
+
+			// SVG image
+			svg_volume = document.createElementNS(svgns, "svg");
+			svg_volume.setAttribute("class", "iex_floating_image_overlay_volume_button");
+			svg_volume.setAttribute("svgns", svgns);
+			svg_volume.setAttribute("width", "2em");
+			svg_volume.setAttribute("height", "2em");
+			svg_volume.setAttribute("viewBox", "0 0 1 1");
+			c_div2.appendChild(svg_volume);
+
+			svg_e1 = document.createElementNS(svgns, "g");
+			svg_e1.setAttribute("class", "iex_floating_image_overlay_button_scale_group");
+			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
+			svg_volume.appendChild(svg_e1);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_speaker iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("points", "0,0.3 0.2,0.3 0.5,0 0.6,0 0.6,1 0.5,1 0.2,0.7 0,0.7");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "path");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_wave_big iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("d", "M 0.75,0.1 Q 1.3,0.5 0.75,0.9 L 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "path");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_wave_small iex_floating_image_overlay_button_fill");
+			svg_e2.setAttribute("d", "M 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "g");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon");
+			svg_e1.appendChild(svg_e2);
+			svg_e1 = svg_e2;
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon_polygon");
+			svg_e2.setAttribute("points", "0.7,0.3 1.0,0.6 0.9,0.7 0.6,0.4");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon_polygon");
+			svg_e2.setAttribute("points", "0.7,0.7 1.0,0.4 0.9,0.3 0.6,0.6");
+			svg_e1.appendChild(svg_e2);
+
+
+
+			// Volume bar
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_right_upper" + style.theme;
+			c_div1.appendChild(c_div2);
+
+			c_volume_container = document.createElement("div");
+			c_volume_container.className = "iex_floating_image_overlay_controls_volume_container" + style.theme;
+			c_div2.appendChild(c_volume_container);
+
+			c_volume_bar = document.createElement("div");
+			c_volume_bar.className = "iex_floating_image_overlay_controls_volume_bar" + style.theme;
+			c_volume_container.appendChild(c_volume_bar);
+
+			c_div3 = document.createElement("div");
+			c_div3.className = "iex_floating_image_overlay_controls_volume_bar_bg" + style.theme;
+			c_volume_bar.appendChild(c_div3);
+
+			c_volume_progress = document.createElement("div");
+			c_volume_progress.className = "iex_floating_image_overlay_controls_volume_bar_level" + style.theme;
+			c_div3.appendChild(c_volume_progress);
+
+
+
+			// Events
+			addEventListenerManaged(events, c_video, "loadedmetadata", on_preview_video_loadedmetadata.bind(this), false);
+			addEventListenerManaged(events, c_video, "canplay", on_preview_video_canplay.bind(this), false);
+			addEventListenerManaged(events, c_video, "canplaythrough", on_preview_video_canplaythrough.bind(this), false);
+			addEventListenerManaged(events, c_video, "error", on_preview_video_error.bind(this), false);
+			addEventListenerManaged(events, c_video, "abort", on_preview_video_abort.bind(this), false);
+			addEventListenerManaged(events, c_video, "progress", on_preview_video_progress.bind(this), false);
+			addEventListenerManaged(events, c_video, "timeupdate", on_preview_video_timeupdate.bind(this), false);
+			addEventListenerManaged(events, c_video, "ended", on_preview_video_ended.bind(this), false);
+
+			var prevent = on_preview_controls_prevent_default_mousedown.bind(this);
+
+			addEventListenerManaged(events, c_padding, "mouseover", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_mouseenter , null ]), false);
+			addEventListenerManaged(events, c_padding, "mouseout", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_mouseleave , null ]), false);
+			addEventListenerManaged(events, c_container, "mousedown", on_preview_controls_container_mousedown.bind(this), false);
+			addEventListenerManaged(events, c_play_button, "click", on_preview_controls_play_button_click.bind(this), false);
+			addEventListenerManaged(events, c_volume_button, "click", on_preview_controls_volume_button_click.bind(this), false);
+			addEventListenerManaged(events, c_volume_button, "mouseover", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_volume_button_mouseenter , null ]), false);
+			addEventListenerManaged(events, c_buttons_right, "mouseout", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_volume_button_container_mouseleave , null ]), false);
+			addEventListenerManaged(events, c_seek_bar, "mousedown", on_preview_controls_seek_bar_mousedown.bind(this), false);
+			addEventListenerManaged(events, c_volume_bar, "mousedown", on_preview_controls_volume_bar_mousedown.bind(this), false);
+			addEventListenerManaged(events, c_time_current, "mousedown", prevent, false);
+			addEventListenerManaged(events, c_time_duration, "mousedown", prevent, false);
+
+
+
+			// Apply data
+			data.nodes.video = c_video;
+			data.nodes.video_nodes = {
+				overlay: c_overlay,
+				padding: c_padding,
+				container: c_container,
+
+				play_button: c_play_button,
+				volume_button: c_volume_button,
+				volume_button_container: c_buttons_right,
+				volume_container: c_volume_container,
+
+				seek_bar: c_seek_bar,
+				volume_bar: c_volume_bar,
+
+				time_current: c_time_current,
+				time_duration: c_time_duration,
+
+				play_progress: c_play_progress,
+				load_progress: c_load_progress,
+				volume_progress: c_volume_progress,
+
+				svg_volume: svg_volume,
+				svg_play: svg_play,
+			};
+			data.state.video = {
+				seeking: false,
+				seeking_paused: false,
+				volume_modifying: false,
+				on_capture_mousemove: on_preview_controls_capture_mousemove.bind(this),
+				on_capture_mouseup: on_preview_controls_capture_mouseup.bind(this),
+				mouse_capturing_element: null,
+				interacted: false,
+				bar_rect: null
+			};
+
+
+			// Insert
+			nodes.overflow.appendChild(c_overlay);
+			nodes.offset.appendChild(c_video);
 		};
 
 		var show_zoom_border = function (persistent) {
@@ -5398,7 +6329,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				if (i_d_t.zoom_border !== null) {
 					clearTimeout(i_d_t.zoom_border);
 				}
-				i_d_t.zoom_border = setTimeout(i_d.events.on_hide_zoom_border_timeout_bind, this.settings.zoom_border_hide_time);
+				i_d_t.zoom_border = setTimeout(i_d.bindings.on_hide_zoom_border_timeout_bind, this.settings.zoom_border_hide_time);
 			}
 		};
 		var hide_zoom_border = function (nullify_timer) {
@@ -5432,7 +6363,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				if (i_d_t.mouse !== null) {
 					clearTimeout(i_d_t.mouse);
 				}
-				i_d_t.mouse = setTimeout(i_d.events.on_hide_mouse_timeout_bind, this.settings.mouse_hide_time);
+				i_d_t.mouse = setTimeout(i_d.bindings.on_hide_mouse_timeout_bind, this.settings.mouse_hide_time);
 			}
 		};
 		var hide_mouse = function (nullify_timer) {
@@ -5512,7 +6443,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			}
 			else {
 				// Set timer
-				i_data.timers.zoom_controls = setTimeout(i_data.events.on_hide_zoom_controls_timeout_bind, 10);
+				i_data.timers.zoom_controls = setTimeout(i_data.bindings.on_hide_zoom_controls_timeout_bind, 10);
 			}
 		};
 		var set_zoom_controls_fixed = function (fixed) {
@@ -5536,6 +6467,202 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				zoom_container.style.top = "";
 			}
 
+		};
+
+		var set_video_initial = function () {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				v_set = this.settings.video;
+
+			// Initial video setup
+			set_video_muted.call(this, v_set.mute_initially);
+			set_video_volume.call(this, v_set.volume, false, false);
+			video.loop = v_set.loop;
+			v_nodes.load_progress.style.width = "0";
+			this.image_data.state.video.interacted = false;
+			if (v_set.mini_controls >= 2) {
+				set_video_mini_controls_enabled.call(this, true);
+			}
+
+			// Update seek bar
+			update_video_seek_status.call(this, -1);
+			update_video_duration_status.call(this);
+
+			// Update icons
+			update_video_play_status.call(this, true);
+		};
+		var set_video_muted = function (muted) {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				v_state = this.image_data.state.video;
+
+			// Apply
+			video.muted = muted;
+
+			// Change icon
+			if (muted) style.add_class_svg(v_nodes.svg_volume, "iex_floating_image_overlay_volume_button_muted");
+			else style.remove_class_svg(v_nodes.svg_volume, "iex_floating_image_overlay_volume_button_muted");
+
+			// Interacted
+			v_state.interacted = true;
+		};
+		var set_video_volume = function (volume, apply_changes, save_changes) {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				v_state = this.image_data.state.video,
+				cls;
+
+			// Set volume on video
+			if (volume >= 0) {
+				if (volume > 1) volume = 1;
+				video.volume = volume;
+			}
+			else {
+				volume = video.volume;
+			}
+
+			// Update bar
+			v_nodes.volume_progress.style.height = (volume * 100).toFixed(2) + "%";
+
+			// Update icons
+			cls = "iex_floating_image_overlay_volume_button" + (video.muted ? " iex_floating_image_overlay_volume_button_muted" : "");
+			if (volume > 0.625) cls += " iex_floating_image_overlay_volume_button_high";
+			else if (volume > 0.125) cls += " iex_floating_image_overlay_volume_button_medium";
+			else cls += " iex_floating_image_overlay_volume_button_low";
+			v_nodes.svg_volume.setAttribute("class", cls);
+
+			// Interacted
+			v_state.interacted = true;
+
+			// Save
+			if (apply_changes) {
+				this.settings.video.volume = volume;
+			}
+			if (save_changes) {
+				// Save
+				settings.change_value(["image_expansion", "video", "volume"], volume);
+				settings.save_values();
+			}
+		};
+		var set_video_paused = function (paused, loop) {
+			var video = this.image_data.nodes.video;
+
+			// Loop
+			if (loop === true || loop === false) {
+				video.loop = loop;
+			}
+
+			// Pause or play
+			if (paused) video.pause();
+			else video.play();
+
+			// Interacted
+			this.image_data.state.video.interacted = true;
+
+			// Update buttons
+			update_video_play_status.call(this, paused);
+		};
+		var update_video_play_status = function (paused) {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes;
+
+			// Update buttons
+			v_nodes.svg_play.setAttribute("class", "iex_floating_image_overlay_play_button" + (video.loop ? " iex_floating_image_overlay_play_button_looping" : "") + (paused ? "" : " iex_floating_image_overlay_play_button_playing"));
+		};
+		var update_video_duration_status = function () {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				duration = video.duration;
+
+			// Update seek bar
+			if (isNaN(duration)) {
+				// Update time numbers
+				v_nodes.time_duration.textContent = "";
+			}
+			else {
+				// Update time numbers
+				v_nodes.time_duration.textContent = format_video_time.call(this, duration);
+			}
+		};
+		var update_video_seek_status = function (time) {
+			var nodes = this.image_data.nodes,
+				video = nodes.video,
+				v_nodes = nodes.video_nodes,
+				duration = video.duration;
+
+			// Update seek bar
+			if (time < 0 || isNaN(duration)) {
+				// Bar
+				v_nodes.play_progress.style.width = "0";
+
+				// Update time numbers
+				v_nodes.time_current.textContent = "";
+			}
+			else {
+				// Bar
+				v_nodes.play_progress.style.width = ((time / duration) * 100).toFixed(2) + "%";
+
+				// Update time numbers
+				v_nodes.time_current.textContent = format_video_time.call(this, time);
+			}
+		};
+		var setup_video_mouse_capture = function () {
+			var v_state = this.image_data.state.video;
+
+			if (v_state.mouse_capturing_element === null && (v_state.mouse_capturing_element = document.documentElement) !== null) {
+				v_state.mouse_capturing_element.addEventListener("mousemove", v_state.on_capture_mousemove, false);
+				v_state.mouse_capturing_element.addEventListener("mouseup", v_state.on_capture_mouseup, false);
+				update_video_mouse_capture.call(this);
+			}
+		};
+		var teardown_video_mouse_capture = function () {
+			var v_state = this.image_data.state.video;
+
+			if (v_state.mouse_capturing_element !== null) {
+				v_state.mouse_capturing_element.removeEventListener("mousemove", v_state.on_capture_mousemove, false);
+				v_state.mouse_capturing_element.removeEventListener("mouseup", v_state.on_capture_mouseup, false);
+				v_state.mouse_capturing_element = null;
+			}
+		};
+		var update_video_mouse_capture = function () {
+			var v_nodes = this.image_data.nodes.video_nodes,
+				v_state = this.image_data.state.video;
+
+			// Set paused state
+			if (v_state.seeking) {
+				v_state.bar_rect = this.get_object_rect(v_nodes.seek_bar);
+			}
+			else if (v_state.volume_modifying) {
+				v_state.bar_rect = this.get_object_rect(v_nodes.volume_bar);
+			}
+		};
+		var set_video_mini_controls_enabled = function (enabled) {
+			// Show or hide the mini controller
+			var v_nodes = this.image_data.nodes.video_nodes;
+
+			if (enabled) style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_mini");
+			else style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_mini");
+		};
+
+		var update_preview_size = function (width_new, height_new) {
+			var set = this.settings,
+				stats = this.image_data.nodes.stats;
+
+			// Change
+			set.size.width = width_new;
+			set.size.height = height_new;
+			set.size_acquired = true;
+
+			// Change info
+			stats.resolution.textContent = set.size.width + "x" + set.size.height;
+
+			// Reset size
+			this.preview_update(true, false, false);
 		};
 
 
@@ -5598,16 +6725,31 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 			update_settings_from_global: function () {
 				// Copy settings
-				var hs = settings.values["image_expansion"]["hover"];
+				var hs = settings.values["image_expansion"]["hover"],
+					vs = settings.values["image_expansion"]["video"],
+					ss = settings.values["image_expansion"]["style"],
+					set = this.settings,
+					v_set = set.video,
+					s_set = set.style;
 
-				this.settings.zoom_invert = hs.zoom_invert;
-				this.settings.zoom_border_show = hs.zoom_border_show;
-				this.settings.zoom_border_hide_time = hs.zoom_border_hide_time * 1000;
-				this.settings.mouse_hide = hs.mouse_hide;
-				this.settings.mouse_hide_time = hs.mouse_hide_time * 1000;
-				this.settings.header_overlap = hs.header_overlap;
-				this.settings.fit_large_allowed = hs.fit_large_allowed;
-				this.settings.display_stats = hs.display_stats;
+				set.zoom_invert = hs.zoom_invert;
+				set.zoom_border_show = hs.zoom_border_show;
+				set.zoom_border_hide_time = hs.zoom_border_hide_time * 1000;
+				set.mouse_hide = hs.mouse_hide;
+				set.mouse_hide_time = hs.mouse_hide_time * 1000;
+				set.header_overlap = hs.header_overlap;
+				set.fit_large_allowed = hs.fit_large_allowed;
+				set.display_stats = hs.display_stats;
+
+				v_set.autoplay = vs.autoplay;
+				v_set.loop = vs.loop;
+				v_set.mute_initially = vs.mute_initially;
+				v_set.volume = vs.volume;
+				v_set.mini_controls = vs.mini_controls;
+
+				s_set.controls_rounded_border = ss.controls_rounded_border;
+
+				if (this.image_data !== null) this.update_style();
 			},
 
 			preview_open: function (image_container, post_info, auto_fit) {
@@ -5635,37 +6777,28 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				if (this.image_data === null) {
 					// Create new
 					this.image_data = create_new_image_preview.call(this);
+					this.update_style();
 				}
+
+
+
+				// Vars
 				var nodes = this.image_data.nodes,
 					stats = nodes.stats,
 					set = this.settings,
-					ani = "";
+					ext = /\.[^\.]+$/.exec(post_info.filename);
 
 
-				// Class resetting
-				nodes.padding.className = "iex_floating_image_padding" + ani + style.theme;
-				nodes.overflow.className = "iex_floating_image_overflow" + style.theme;
-				nodes.background.className = "iex_floating_image_background" + ani + style.theme;
-				nodes.zoom_border.className = "iex_floating_image_zoom_border iex_floating_image_zoom_border_hidden" + ani + style.theme
 
-				// Hide status
-				style.add_class(stats.status[0].className, "iex_floating_image_stats_hidden");
-				style.add_class(stats.status[1].className, "iex_floating_image_stats_hidden");
-				style.remove_classes(stats.status[0], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
-				style.remove_classes(stats.status[1], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
+				// Expansion type
+				ext = ext ? ext[0].toLowerCase() : "";
+				set.type = (this.extensions_video.indexOf(ext) >= 0) ? TYPE_VIDEO : TYPE_IMAGE;
 
-				// Stats level
-				if (set.display_stats == 0) {
-					style.remove_classes(stats.container, "iex_floating_image_stats_container_minimal iex_floating_image_stats_container_very_minimal");
-				}
-				else if (set.display_stats == 1) {
-					style.remove_class(stats.container, "iex_floating_image_stats_container_very_minimal");
-					style.add_class(stats.container, "iex_floating_image_stats_container_minimal");
-				}
-				else if (set.display_stats == 2) {
-					style.remove_class(stats.container, "iex_floating_image_stats_container_minimal");
-					style.add_class(stats.container, "iex_floating_image_stats_container_very_minimal");
-				}
+
+
+				// Reset
+				if (this.image_visible) preview_reset.call(this);
+
 
 
 				// Apply settings
@@ -5678,15 +6811,25 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				set.zoom_y = 0.0;
 				set.mouse_x = 0.0;
 				set.mouse_y = 0.0;
-				set.size.width = post_info.resolution.width;
-				set.size.height = post_info.resolution.height;
+				if (post_info.resolution.width > 0 && post_info.resolution.height > 0) {
+					// Size info okay
+					set.size.width = post_info.resolution.width;
+					set.size.height = post_info.resolution.height;
+					set.size_acquired = true;
+				}
+				else {
+					// No size found
+					if (post_info.resolution_thumb.width > 0 && post_info.resolution_thumb.height > 0) {
+						set.size.width = post_info.resolution_thumb.width;
+						set.size.height = post_info.resolution_thumb.height;
+					}
+					else {
+						set.size.width = 100;
+						set.size.height = 100;
+					}
+					set.size_acquired = false;
+				}
 
-
-				// Set stats
-				stats.resolution.textContent = post_info.resolution.width + "x" + post_info.resolution.height;
-				stats.filesize.textContent = post_info.size + post_info.size_label;
-				stats.filename.textContent = post_info.filename;
-				stats.status[0].textContent = "";
 
 
 				// Positioning
@@ -5694,13 +6837,34 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				this.preview_update(true, false, false);
 
 
-				// Zoom stat
+
+				// Stats display level
+				if (set.display_stats == 0) {
+					style.remove_classes(stats.container, "iex_floating_image_stats_container_minimal iex_floating_image_stats_container_very_minimal");
+				}
+				else if (set.display_stats == 1) {
+					style.remove_class(stats.container, "iex_floating_image_stats_container_very_minimal");
+					style.add_class(stats.container, "iex_floating_image_stats_container_minimal");
+				}
+				else if (set.display_stats == 2) {
+					style.remove_class(stats.container, "iex_floating_image_stats_container_minimal");
+					style.add_class(stats.container, "iex_floating_image_stats_container_very_minimal");
+				}
+
+				// Set stats
+				if (set.size_acquired) {
+					stats.resolution.textContent = set.size.width + "x" + set.size.height;
+				}
+				else {
+					stats.resolution.textContent = "unknown";
+				}
+				stats.filesize.textContent = post_info.size + post_info.size_label;
+				stats.filename.textContent = post_info.filename;
 				update_zoom_stat.call(this);
 
 
-				// Load images
-				var ext = /\.[^\.]+$/.exec(post_info.filename);
-				ext = ext ? ext[0].toLowerCase() : "";
+
+				// Background image
 				if (post_info.thumb !== null) {
 					nodes.background.style.backgroundImage = "url('" + post_info.thumb + "')";
 					if (!this.extensions_display_bg[ext]) {
@@ -5710,11 +6874,34 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				}
 				else {
 					// Hide
-					nodes.background.style.backgroundImage = "";
 					style.add_class(nodes.background, "iex_floating_image_background_disabled");
 				}
-				nodes.image.removeAttribute("src");
-				nodes.image.setAttribute("src", post_info.image);
+
+				// Image or video setup
+				if (set.type == TYPE_IMAGE) {
+					// Image
+					style.remove_class(nodes.image, "iex_floating_image_image_hidden");
+
+					if (!set.size_acquired) style.add_class(nodes.image, "iex_floating_image_image_unsized");
+
+					nodes.image.removeAttribute("src");
+					nodes.image.setAttribute("src", post_info.image);
+				}
+				else { // if (set.type == TYPE_VIDEO) {
+					// Reset controls
+					var video = nodes.video;
+					set_video_initial.call(this);
+
+					// Video
+					style.remove_class(video, "iex_floating_image_video_hidden");
+					style.add_class(video, "iex_floating_image_video_not_ready");
+
+					if (!set.size_acquired) style.add_class(nodes.video, "iex_floating_image_video_unsized");
+
+					video.setAttribute("src", post_info.image);
+					video.load();
+				}
+
 
 
 				// Visible
@@ -5744,12 +6931,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				}
 
 				// Remove visibility
-				var nodes = this.image_data.nodes;
-				style.remove_class(nodes.container, "iex_floating_image_container_visible");
-				style.remove_class(nodes.connector, "iex_floating_image_connector_visible");
-				nodes.background.style.backgroundImage = "";
-				nodes.image.removeAttribute("src");
-				this.image_visible = false;
+				preview_reset.call(this);
 			},
 			preview_close_cancel: function () {
 				// Cancel the timer
@@ -6142,6 +7324,23 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				c_offset.style.top = (h_diff * -y).toFixed(2) + "px";
 			},
 
+			update_style: function () {
+				var nodes = this.image_data.nodes,
+					v_nodes = nodes.video_nodes,
+					set = this.settings,
+					b_class = "iex_floating_image_overlay_controls_no_border_radius";
+
+				// Rounded borders
+				if (is_chrome || !set.style.controls_rounded_border) {
+					style.add_class(v_nodes.seek_bar, b_class);
+					style.add_class(v_nodes.volume_bar, b_class);
+				}
+				else {
+					style.remove_class(v_nodes.seek_bar, b_class);
+					style.remove_class(v_nodes.volume_bar, b_class);
+				}
+			},
+
 			get_window_rect: function () {
 				var doc = document.documentElement;
 
@@ -6235,5 +7434,6 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 	settings.on_ready(image_hover.start.bind(image_hover));
 
 })();
+
 
 
