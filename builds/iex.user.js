@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.1
+// @version     2.2
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -10,6 +10,8 @@
 // @icon        data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==
 // @include     http://boards.4chan.org/*
 // @include     https://boards.4chan.org/*
+// @include     http://i.4cdn.org/*
+// @include     https://i.4cdn.org/*
 // @updateURL   https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js
 // @downloadURL https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js
 // ==/UserScript==
@@ -33,7 +35,7 @@ var main =
 	var is_firefox = (navigator.userAgent.toString().indexOf("Firefox") >= 0);
 	var is_chrome = (navigator.userAgent.toString().indexOf(" Chrome/") >= 0);
 	var is_opera = !is_firefox && !is_chrome && !(navigator.userAgent.toString().indexOf("MSIE") >= 0);
-	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.1","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
+	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.2","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
 
 	// Error logging
 	var log_error = function (error_string) {
@@ -783,10 +785,6 @@ var main =
 			this.settings_observer = null;
 			this.hover_ui_observer = null;
 			this.header_settings_menu_observer = null;
-
-			// Check for other addons
-			hook_document_observer.call(this);
-			ASAP.asap(on_asap.bind(this));
 		};
 
 
@@ -1231,6 +1229,21 @@ var main =
 				else if (doc_el.querySelector("#doc")) {
 					this.page_type = "error";
 				}
+				else {
+					// Image or video
+					var n = doc_el.querySelector("body"),
+						s = doc_el.querySelectorAll("script");
+
+					if (s.length == 0 && n !== null && n.children.length == 1 && (n = n.firstChild)) {
+						n = n.tagName.toLowerCase();
+						if (n == "img") {
+							this.page_type = "image";
+						}
+						else if (n == "video") {
+							this.page_type = "video";
+						}
+					}
+				}
 			}
 
 			// Trigger event
@@ -1437,6 +1450,12 @@ var main =
 					this.delform_observer.disconnect();
 					this.delform_observer = null;
 				}
+			},
+
+			setup: function () {
+				// Check for other addons
+				hook_document_observer.call(this);
+				ASAP.asap(on_asap.bind(this));
 			},
 
 			on: function (event, callback) {
@@ -1995,12 +2014,12 @@ var main =
 					"normal": {
 						"enabled": true,
 						"timeout": 0.0,
-						"to_fit": false
+						"to_fit": true
 					},
 					"spoiler": {
 						"enabled": true,
 						"timeout": 0.0,
-						"to_fit": false
+						"to_fit": true
 					},
 					"hover": {
 						"zoom_invert": false,
@@ -2071,20 +2090,6 @@ var main =
 			this.settings_difficulty_container = null;
 			this.settings_removal_data = null;
 			this.settings_update_other_after_close = false;
-
-			// Events
-			sync.on("install_complete", this.on_install_complete_sync_bind = on_install_complete_sync.bind(this));
-			sync.on("settings_save", this.on_settings_save_sync_bind = on_settings_save_sync.bind(this));
-			sync.on("image_expansion_enable", this.on_image_expansion_enable_sync_bind = on_image_expansion_enable_sync.bind(this));
-
-			// Modify other settings
-			api.on("settings_4chanx_section_change", this.on_settings_4chanx_section_change_bind = on_settings_4chanx_section_change.bind(this));
-			api.on("settings_vanilla_open", this.on_settings_vanilla_open_bind = on_settings_vanilla_open.bind(this));
-			api.on("menu_4chanx_open", this.on_menu_4chanx_open_bind = on_menu_4chanx_open.bind(this));
-
-			// Check for 4chan-x
-			ASAP.asap(on_first_run_check.bind(this));
-			ASAP.asap(on_insert_links.bind(this), on_insert_links_condition, 0.5);
 		};
 
 
@@ -3688,6 +3693,22 @@ var main =
 		Settings.prototype = {
 			constructor: Settings,
 
+			setup: function () {
+				// Events
+				sync.on("install_complete", this.on_install_complete_sync_bind = on_install_complete_sync.bind(this));
+				sync.on("settings_save", this.on_settings_save_sync_bind = on_settings_save_sync.bind(this));
+				sync.on("image_expansion_enable", this.on_image_expansion_enable_sync_bind = on_image_expansion_enable_sync.bind(this));
+
+				// Modify other settings
+				api.on("settings_4chanx_section_change", this.on_settings_4chanx_section_change_bind = on_settings_4chanx_section_change.bind(this));
+				api.on("settings_vanilla_open", this.on_settings_vanilla_open_bind = on_settings_vanilla_open.bind(this));
+				api.on("menu_4chanx_open", this.on_menu_4chanx_open_bind = on_menu_4chanx_open.bind(this));
+
+				// Script check
+				ASAP.asap(on_first_run_check.bind(this));
+				ASAP.asap(on_insert_links.bind(this), on_insert_links_condition, 0.5);
+			},
+
 			get_value: function (tree) {
 				// Traverse tree
 				var val = this.values, i = 0, j = tree.length - 1;
@@ -4448,7 +4469,8 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 .iex_cpreview_container:not(.iex_cpreview_container_visible){display:none;}\
 .iex_cpreview_padding{display:block;position:relative;margin:0;padding:0;left:0;top:0;}\
 .iex_cpreview_overflow{display:block;position:relative;overflow:hidden;}\
-.iex_cpreview_offset{display:block;position:relative;width:100%;height:100%;}\
+.iex_cpreview_offset{display:block;position:relative;width:100%;height:100%;text-align:center;}\
+.iex_cpreview_offset.iex_cpreview_offset_sized{}\
 .iex_cpreview_overlay{}\
 .iex_cpreview_content{}\
 \
@@ -4491,14 +4513,18 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 .iex_mpreview_stat_zoom_control_decrease:hover{color:#f08060;}\
 .iex_mpreview_stat_zoom_control_decrease.iex_dark:hover{color:#ffb0a0;}\
 \
-.iex_mpreview_image{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_mpreview_image{display:inline-block;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
 .iex_mpreview_image:not(.iex_mpreview_image_visible){display:none;}\
 .iex_mpreview_image.iex_mpreview_image_unsized{max-width:100%;max-height:100%;}\
+.iex_cpreview_offset.iex_cpreview_offset_sized>.iex_mpreview_image{position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;}\
+.iex_cpreview_offset:not(.iex_cpreview_offset_sized)>.iex_mpreview_image{max-width:100%;max-height:100%;width:auto;height:auto;}\
 \
-.iex_mpreview_video{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_mpreview_video{display:inline-block;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
 .iex_mpreview_video:not(.iex_mpreview_video_visible){display:none;}\
 .iex_mpreview_video.iex_mpreview_video_unsized{max-width:100%;max-height:100%;}\
 .iex_mpreview_video.iex_mpreview_video_not_ready{visibility:hidden;}\
+.iex_cpreview_offset.iex_cpreview_offset_sized>.iex_mpreview_video{position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;}\
+.iex_cpreview_offset:not(.iex_cpreview_offset_sized)>.iex_mpreview_video{max-width:100%;max-height:100%;width:auto;height:auto;}\
 \
 .iex_mpreview_vcontrols_container{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background:transparent;font-size:1.5em;}\
 .iex_mpreview_vcontrols_container_inner{display:block;position:absolute;left:0;bottom:0;right:0;padding-top:2em;height:2em;background:transparent;}\
@@ -6252,7 +6278,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				this.connector.style.top = (img_rect.top).toFixed(2) + "px";
 				this.connector.style.width = (paddings.left).toFixed(2) + "px";
 				this.connector.style.height = (img_rect.bottom - img_rect.top).toFixed(2) + "px";
-console.log((paddings.left)+","+(img_rect.bottom - img_rect.top));
+
 				// Stats
 				this.mpreview.set_stat_zoom((set.display_stats <= 1), (zoom * 100) + "%", fit ? " fit-" + (this.mpreview.fit_axis == 0 ? "x" : "y") : "");
 			},
@@ -8050,6 +8076,7 @@ console.log((paddings.left)+","+(img_rect.bottom - img_rect.top));
 				// Set visible size
 				offset.style.width = width.toFixed(2) + "px";
 				offset.style.height = height.toFixed(2) + "px";
+				style.add_class(offset, "iex_cpreview_offset_sized");
 
 				// Set visible offset
 				offset.style.left = (w_diff * -this.offset_x).toFixed(2) + "px";
@@ -8135,6 +8162,9 @@ console.log((paddings.left)+","+(img_rect.bottom - img_rect.top));
 	// Execute once page type is detected
 	api.on("page_type_detected", function (event) {
 		if (event.page_type == "board" || event.page_type == "thread" || event.page_type == "catalog") {
+			// Settings
+			settings.setup();
+
 			// Insert stylesheet
 			style.insert_stylesheet();
 
@@ -8142,7 +8172,14 @@ console.log((paddings.left)+","+(img_rect.bottom - img_rect.top));
 			image_hover = new ImageHover();
 			settings.on_ready(image_hover.start.bind(image_hover));
 		}
+		else if (event.page_type == "video") {
+			// Auto-loop .webm's
+			var video = document.body.querySelector("video");
+
+			if (video) video.loop = true;
+		}
 	});
+	api.setup();
 
 })();
 
