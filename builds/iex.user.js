@@ -2,16 +2,25 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.0
+// @version     2.1
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
 // @run-at      document-start
 // @icon        data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==
-// @include     *://boards.4chan.org/*
+// @include     http://boards.4chan.org/*
+// @include     https://boards.4chan.org/*
 // @updateURL   https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js
 // @downloadURL https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js
 // ==/UserScript==
+
+
+
+/*
+(function () {
+"use strict";
+var main =
+*/
 
 
 
@@ -24,7 +33,7 @@
 	var is_firefox = (navigator.userAgent.toString().indexOf("Firefox") >= 0);
 	var is_chrome = (navigator.userAgent.toString().indexOf(" Chrome/") >= 0);
 	var is_opera = !is_firefox && !is_chrome && !(navigator.userAgent.toString().indexOf("MSIE") >= 0);
-	var userscript = {"include":["*://boards.4chan.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.0","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
+	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.1","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
 
 	// Error logging
 	var log_error = function (error_string) {
@@ -738,6 +747,7 @@
 		var API = function () {
 			// Custom events
 			this.events = {
+				"page_type_detected": [],
 				"script_detected": [],
 				"thread_update": [],
 				"settings_4chanx_open": [],
@@ -764,6 +774,7 @@
 			// Script
 			this.is_4chanx = false;
 			this.is_appchanx = false;
+			this.page_type = "";
 
 			// Document listening
 			this.doc_observer = null;
@@ -775,10 +786,25 @@
 
 			// Check for other addons
 			hook_document_observer.call(this);
-			ASAP.asap(on_asap_check.bind(this));
+			ASAP.asap(on_asap.bind(this));
 		};
 
 
+
+		var on_asap = function () {
+			// Hook
+			hook_body_observers.call(this);
+			hook_hover_observers.call(this, null);
+			hook_delform_observers.call(this, null);
+			hook_header_observers.call(this, null);
+
+			// Detect scripts
+			var el = document.documentElement;
+			if (el) {
+				detect_page_type.call(this, el);
+				detect_scripts.call(this, el);
+			}
+		};
 
 		var on_4chanx_post_callback = function (self, callback) {
 			callback.call(self, this);
@@ -1075,20 +1101,6 @@
 			style.remove_class(element, "focused");
 		};
 
-		var on_asap_check = function () {
-			// Hook
-			hook_body_observers.call(this);
-			hook_hover_observers.call(this, null);
-			hook_delform_observers.call(this, null);
-			hook_header_observers.call(this, null);
-
-			// Detect scripts
-			var el = document.documentElement;
-			if (el) {
-				detect_scripts.call(this, el, true);
-			}
-		};
-
 		var hook_document_observer = function () {
 			var el = document.documentElement;
 			if (!el) return;
@@ -1188,6 +1200,44 @@
 			}
 		};
 
+		var detect_page_type = function (doc_el) {
+			// Detect page type
+			var delform = doc_el.querySelector("#delform");
+			if (delform) {
+				var flash_table = delform.querySelector(".flashListing");
+				if (flash_table) {
+					// Flash board
+					this.page_type = "board_flash";
+				}
+				else {
+					// Thread or board or catalog
+					if (delform.querySelector(".board.catalog-small")) {
+						// 4chan-x
+						this.page_type = "catalog";
+					}
+					else if (doc_el.querySelector("#search-box")) {
+						this.page_type = "board";
+					}
+					else {
+						this.page_type = "thread";
+					}
+				}
+			}
+			else {
+				// Index
+				if (doc_el.querySelector("#content>#threads")) {
+					this.page_type = "catalog";
+				}
+				else if (doc_el.querySelector("#doc")) {
+					this.page_type = "error";
+				}
+			}
+
+			// Trigger event
+			trigger.call(this, "page_type_detected", {
+				page_type: this.page_type
+			});
+		};
 		var detect_scripts = function (doc_el) {
 			// Detect 4chan-x / appchan-x
 			if (!this.is_4chanx) {
@@ -1584,6 +1634,10 @@
 						if ((n = n_p.querySelector("a"))) {
 							info.image = n.getAttribute("href") || "";
 
+							// File name
+							info.filename = n_p.getAttribute("title") || n.getAttribute("title") || n.textContent || "";
+
+							// Attributes
 							if ((n = n.nextSibling)) {
 								m = /([0-9\.]+)\s*(\w?b),(?:\s*([0-9]+)x([0-9]+))?/i.exec((n.textContent || ""));
 								if (m) {
@@ -1596,13 +1650,6 @@
 								}
 							}
 						}
-						if ((n = n_p.querySelector("span"))) {
-							info.filename = n.getAttribute("title") || n.textContent || "";
-						}
-						else {
-							// Spoilers
-							info.filename = n_p.getAttribute("title") || "";
-						}
 					}
 
 					// Thumbnail and spoiler status
@@ -1611,6 +1658,8 @@
 							m = n.getAttribute("src");
 							if (style.has_class(n_p, "imgspoiler")) {
 								info.spoiler = m;
+								// Assume thumbnail
+								info.thumb = info.image.replace(/\/\/(.*)i\.4cdn\.org/g, "//t.4cdn.org").replace(/\.([^\.]*)$/, "s.jpg");
 							}
 							else {
 								info.thumb = m;
@@ -1682,6 +1731,21 @@
 				n = image_container;
 				while ((n = n.parentNode) && !style.has_class(n, "postContainer"));
 				return n;
+			},
+
+			get_header_rect: function () {
+				var header = document.getElementById("header-bar");
+				if (header) {
+					return style.get_object_rect(header);
+				}
+				else {
+					return {
+						left: 0,
+						top: 0,
+						right: 0,
+						bottom: 0,
+					};
+				}
 			},
 
 		};
@@ -1940,13 +2004,28 @@
 					},
 					"hover": {
 						"zoom_invert": false,
-						"zoom_border_show": true,
-						"zoom_border_hide_time": 0.5,
+						"zoom_borders_show": true,
+						"zoom_borders_hide_time": 0.5,
+						"zoom_buttons": true,
 						"mouse_hide": true,
 						"mouse_hide_time": 1.0,
 						"header_overlap": false,
 						"fit_large_allowed": true,
 						"display_stats": 0
+					},
+					"extensions": {
+						"jpg": {
+							"background": 1, // 0 : never show, 1: show before load (transparent), 2: show before load (opaque)
+						},
+						"png": {
+							"background": 1,
+						},
+						"gif": {
+							"background": 1,
+						},
+						"webm": {
+							"background": 2,
+						},
 					},
 					"video": {
 						"autoplay": 1, // 0 = not at all, 1 = asap, 2 = when it can play "through", 3 = fully loaded
@@ -1956,6 +2035,7 @@
 						"mini_controls": 1, // 0 = never, 1 = when mouse is over the video, 2 = when mouse is NOT over the video, 3 = always
 					},
 					"style": {
+						"animations_background": true,
 						"controls_rounded_border": true
 					}
 				}
@@ -1966,7 +2046,6 @@
 			this.change_events = {};
 
 			// Load settings
-			//this.save_values(); // clear settings to default
 			this.load_values(false);
 
 			// Events
@@ -3130,7 +3209,7 @@
 			descriptors.push({
 				level: "normal",
 				section: "Hover",
-				tree: [ "image_expansion" , "hover" , "zoom_border_show" ],
+				tree: [ "image_expansion" , "hover" , "zoom_borders_show" ],
 				label: "Zoom Borders",
 				description: "Display borders inside the preview displaying the mouse movement region",
 				type: "checkbox",
@@ -3141,11 +3220,22 @@
 			descriptors.push({
 				level: "normal",
 				section: "Hover",
-				tree: [ "image_expansion" , "hover" , "zoom_border_hide_time" ],
+				tree: [ "image_expansion" , "hover" , "zoom_borders_hide_time" ],
 				modify: string_to_float,
 				label: "Zoom Borders Hide Timeout",
 				description: "Time to wait after mouse has stopped to hide the zoom borders (in seconds)",
 				type: "textbox",
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "hover" , "zoom_buttons" ],
+				label: "Zoom Buttons",
+				description: "Show zooming buttons when the zoom% is hovered",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "disabled" , "enabled" ],
 			});
 
 			descriptors.push({
@@ -3167,6 +3257,61 @@
 				label: "Cursor Hide Timeout",
 				description: "Time to wait after mouse has stopped to hide cursor (in seconds)",
 				type: "textbox",
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "hover" , "mouse_hide_time" ],
+				modify: string_to_float,
+				label: "Cursor Hide Timeout",
+				description: "Time to wait after mouse has stopped to hide cursor (in seconds)",
+				type: "textbox",
+			});
+
+			// File types
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "extensions" , "jpg" , "background" ],
+				label: "Thumbnail Background (.jpg)",
+				description: "How to display the thumbnail image in the background while loading",
+				type: "text",
+				values: [ 0 , 1 , 2 ],
+				value_labels: [ "never show" , "semi-transparent" , "opaque" ]
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "extensions" , "png" , "background" ],
+				label: "Thumbnail Background (.png)",
+				description: "How to display the thumbnail image in the background while loading",
+				type: "text",
+				values: [ 0 , 1 , 2 ],
+				value_labels: [ "never show" , "semi-transparent" , "opaque" ]
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "extensions" , "gif" , "background" ],
+				label: "Thumbnail Background (.gif)",
+				description: "How to display the thumbnail image in the background while loading",
+				type: "text",
+				values: [ 0 , 1 , 2 ],
+				value_labels: [ "never show" , "semi-transparent" , "opaque" ]
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Hover",
+				tree: [ "image_expansion" , "extensions" , "webm" , "background" ],
+				label: "Thumbnail Background (.webm)",
+				description: "How to display the thumbnail image in the background while loading",
+				type: "text",
+				values: [ 0 , 1 , 2 ],
+				value_labels: [ "never show" , "transparent" , "opaque" ]
 			});
 
 			// Video settings
@@ -3215,6 +3360,17 @@
 			});
 
 			// Style settings
+			descriptors.push({
+				level: "normal",
+				section: "Style",
+				tree: [ "image_expansion" , "style" , "animations_background" ],
+				label: "Background Image Animations",
+				description: "Use animated CSS transitions for the background image",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "unanimated" , "animated" ],
+			});
+
 			descriptors.push({
 				level: "normal",
 				section: "Style",
@@ -3966,225 +4122,8 @@
 
 
 		var Style = function () {
-			// Create stylesheet
-			var stylesheet_text = "";
-			stylesheet_text += //{ Stylesheet
-				'\
-body.iex_hide_other_settings #settingsMenu,\
-body.iex_hide_other_settings #overlay,\
-body.iex_hide_other_settings #appchanx-settings,\
-body.iex_hide_other_settings #fourchanx-settings{visibility:hidden !important;}\
-\
-.iex_settings_popup_overlay{position:fixed;z-index:200;left:0;top:0;bottom:0;right:0;font-size:14px;background:rgba(0,0,0,0.25);}\
-.iex_settings_popup_overlay.iex_dark{background:rgba(255,255,255,0.25);}\
-.iex_settings_popup{margin:0;padding:0;width:100%;height:100%;text-align:center;white-space:nowrap;z-index:200;line-height:0;}\
-.iex_settings_popup_aligner{height:100%;width:0;display:inline-block;vertical-align:middle;}\
-.iex_settings_popup_inner{display:inline-block;vertical-align:middle;text-align:left;line-height:normal;white-space:normal;position:relative;width:40em;height:80%;min-height:14em;}\
-.iex_settings_popup_table{display:table;position:relative;table-layout:fixed;width:100%;height:100%;box-shadow:0 0 1em 0.25em #000000;}\
-.iex_settings_popup_table.iex_dark{box-shadow:0 0 1em 0.25em #ffffff;}\
-.iex_settings_popup_top{display:table-row;width:100%;}\
-.iex_settings_popup_top_content{display:table;width:100%;background:rgba(0,0,0,0.0625);}\
-.iex_settings_popup_top_content.iex_dark{background:rgba(255,255,255,0.0625);}\
-.iex_settings_popup_top_label{display:table-cell;vertical-align:middle;padding:0.25em;font-size:1.125em;font-weight:bold;text-shadow:0 0.0625em 0.25em #ffffff;}\
-.iex_settings_popup_top_label.iex_dark{text-shadow:0 0.0625em 0.25em #000000;}\
-.iex_settings_popup_top_right{display:table-cell;vertical-align:middle;padding:0.25em;text-align:right;}\
-.iex_settings_popup_middle{display:table-row;width:100%;height:100%;}\
-.iex_settings_popup_middle_content_pad{display:block;width:100%;height:100%;position:relative;}\
-.iex_settings_popup_middle_content{display:block;position:absolute;left:0;top:0;bottom:0;right:0;padding:0;overflow:auto;}\
-.iex_settings_popup_middle_content_inner{display:block;padding:0.25em;}\
-.iex_settings_popup_close_link{font-weight:bold;text-decoration:none !important;padding:0em 0.2em;}\
-.iex_settings_popup_bottom{display:table-row;width:100%;}\
-\
-.iex_settings_container{position:relative;}\
-.iex_settings_region_container{margin:0.25em -0.25em -0.25em 2em;}\
-.iex_settings_region{}\
-.iex_settings_group{}\
-.iex_settings_group.iex_settings_group_hidden{display:none;}\
-.iex_settings_group_label{font-size:1.125em;padding-bottom:0.125em;margin-bottom:0.25em;font-weight:bold;text-align:left;color:#000000;border-bottom:0.125em solid rgba(0,0,0,0.5);text-shadow:0em 0em 0.25em #ffffff;}\
-.iex_settings_group_label.iex_dark{color:#ffffff;border-bottom:0.125em solid rgba(255,255,255,0.5);text-shadow:0em 0em 0.25em #000000;}\
-.iex_settings_group.iex_settings_group_padding_top{margin-top:1em;}\
-.iex_settings_setting{padding:0.25em;background:transparent;}\
-.iex_settings_setting.iex_settings_setting_top_padding{margin-top:0.25em;}\
-.iex_settings_setting.iex_settings_setting_hidden{display:none;}\
-.iex_settings_setting.iex_settings_setting_odd{background:rgba(0,0,0,0.0625);}\
-.iex_settings_setting.iex_settings_setting_odd.iex_dark{background:rgba(255,255,255,0.0625);}\
-.iex_settings_setting_table{display:block;width:100%;}\
-.iex_settings_setting_left{display:block;overflow:hidden;text-align:left;vertical-align:top;}\
-.iex_settings_setting_right{display:inline-block;float:right;text-align:right;vertical-align:middle;padding:0.5em 0em;}\
-.iex_settings_setting_label{display:block;}\
-.iex_settings_setting_label_title{color:#000000;font-weight:bold;font-size:1.125em;vertical-align:baseline;}\
-.iex_settings_setting_label_title.iex_dark{color:#ffffff;}\
-.iex_settings_setting_label_subtitle{color:#000000;font-weight:bold;font-size:1em;vertical-align:baseline;opacity:0.625;margin-left:0.5em;}\
-.iex_settings_setting_label_subtitle.iex_dark{color:#ffffff;}\
-.iex_settings_setting_label_subtitle:before{content:"(";}\
-.iex_settings_setting_label_subtitle:after{content:")";}\
-.iex_settings_setting_description{margin-left:0.5em;}\
-.iex_settings_setting_input_container{display:inline-block;white-space:nowrap;cursor:pointer;}\
-.iex_settings_setting_input_container.iex_settings_setting_input_container_reverse{direction:rtl;}\
-.iex_settings_setting_input_checkbox{vertical-align:middle;}\
-.iex_settings_setting_input_checkbox+.iex_settings_setting_input_label,\
-.iex_settings_setting_input_checkbox+*+.iex_settings_setting_input_label{vertical-align:middle;padding-right:0.5em;}\
-.iex_settings_setting_input_checkbox+.iex_settings_setting_input_label:after,\
-.iex_settings_setting_input_checkbox+*+.iex_settings_setting_input_label:after{content:attr(data-iex-checkbox-label-off);}\
-.iex_settings_setting_input_checkbox:checked+.iex_settings_setting_input_label:after,\
-.iex_settings_setting_input_checkbox:checked+*+.iex_settings_setting_input_label:after{content:attr(data-iex-checkbox-label-on);}\
-.iex_settings_setting_input_textbox{width:10em;padding:0.125em;}\
-.iex_settings_difficulty_container{position:absolute;right:0;top:0;margin-top:0.5em;}\
-.iex_settings_popup a.iex_settings_difficulty_choice{cursor:pointer;text-decoration:none !important;}\
-.iex_settings_popup a.iex_settings_difficulty_choice.iex_settings_difficulty_choice_selected{text-decoration:underline !important;}\
-.iex_settings_popup a.iex_settings_homepage_link{text-decoration:none !important;}\
-.iex_settings_difficulty_separator{}\
-\
-.iex_notification{position:fixed;left:0;top:0;bottom:0;right:0;z-index:100;background:rgba(255,255,255,0.5);font-size:14px;}\
-.iex_notification.iex_dark{background:rgba(0,0,0,0.5);}\
-.iex_notification_body_outer{margin:0;padding:0;width:100%;height:100%;text-align:center;white-space:nowrap;z-index:200;line-height:0;}\
-.iex_notification_body_aligner{height:100%;width:0;display:inline-block;vertical-align:middle;}\
-.iex_notification_body_inner{display:inline-block;vertical-align:middle;line-height:normal;}\
-.iex_notification_body{position:relative;text-align:center;white-space:normal;width:36em;padding:0.375em 1em;border-radius:0.25em;box-shadow:0em 0em 0.25em 0.125em rgba(0,0,0,0.5);}\
-.iex_notification_body.iex_dark{box-shadow:0em 0em 0.25em 0.125em rgba(255,255,255,0.5);}\
-.iex_notification_body.iex_notification_info{background:rgba(0,120,220,0.9);}\
-.iex_notification_body.iex_notification_success{background:rgba(0,168,20,0.9);}\
-.iex_notification_body.iex_notification_error{background:rgba(220,0,0,0.9);}\
-.iex_notification_body.iex_notification_warning{background:rgba(220,120,0,0.9);}\
-a.iex_notification_close{color:#ffffff !important;position:absolute;top:0;right:0;z-index:10;cursor:pointer;font-weight:bold;}\
-a.iex_notification_close:hover{color:#000000 !important;text-shadow:0em 0.0625em 0.125em #ffffff;}\
-a.iex_notification_close.iex_notification_close_hidden{display:none;}\
-.iex_notification_content_outer{position:relative;}\
-.iex_notification_content{position:relative;}\
-.iex_notification_content_title{font-weight:bold;margin-bottom:0.75em;color:#ffffff;text-shadow:0em 0.0625em 0.125em #000000;}\
-.iex_notification_content_body{color:#ffffff;text-shadow:0em 0.0625em 0.125em rgba(0,0,0,0.5);}\
-.iex_notification_content a{color:#ffffff !important;text-decoration:none;}\
-.iex_notification_content a:hover{color:#c010e0 !important;}\
-.iex_notification_content.iex_dark a:hover{color:#d040e8 !important;}\
-.iex_notification_content .iex_spaced_div{margin-bottom:0.5em;}\
-.iex_notification_content a.iex_highlighted_link{font-weight:bold;text-decoration:underline !important;}\
-.iex_notification_content a.iex_underlined_link{text-decoration:underline !important;}\
-textarea.iex_notification_textarea{width:100%;height:5em;min-height:2em;font-family:Courier New;font-size:1em;text-align:left;color:#ffffff !important;background-color:transparent !important;border:0.08em solid rgba(255,255,255,0.5) !important;padding:0.25em;margin:0;resize:vertical;box-sizing:border-box;-moz-box-sizing:border-box;}\
-textarea.iex_notification_textarea:hover,\
-textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.0625) !important;border:0.08em solid rgba(255,255,255,0.75) !important;}\
-\
-.iex_floating_container{display:block;margin:0;padding:0;border:0em hidden;}\
-.iex_floating_image_container{display:none;position:fixed;z-index:100;}\
-.iex_floating_image_container.iex_floating_image_container_visible{display:block;}\
-.iex_floating_image_padding{display:block;position:relative;margin:0;padding:0;left:0;top:0;box-shadow:0em 0em 0.6em 0.3em rgba(0,0,0,0.75);background-color:rgba(255,255,255,0.5);}\
-.iex_floating_image_padding.iex_dark{box-shadow:0em 0em 0.6em 0.3em rgba(255,255,255,0.75);background-color:rgba(0,0,0,0.5);}\
-.iex_floating_image_overflow{display:block;position:relative;overflow:hidden;}\
-.iex_floating_image_overflow.iex_floating_image_overflow_no_cursor{cursor:none !important;}\
-.iex_floating_image_offset{display:block;position:relative;}\
-.iex_floating_image_background{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background-color:transparent;background-repeat:no-repeat;background-position:left top;background-size:100% 100%;opacity:0.375;}\
-.iex_floating_image_background.iex_floating_image_background_disabled{visibility:hidden;}\
-.iex_floating_image_background.iex_floating_image_background_hidden{display:none;}\
-.iex_floating_image_background.iex_floating_image_background_fallback{opacity:1;}\
-.iex_floating_image_image{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
-.iex_floating_image_image.iex_floating_image_image_unsized{max-width:100%;max-height:100%;}\
-.iex_floating_image_image.iex_floating_image_image_hidden{display:none;}\
-.iex_floating_image_video{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
-.iex_floating_image_video.iex_floating_image_video_unsized{max-width:100%;max-height:100%;}\
-.iex_floating_image_video.iex_floating_image_video_hidden{display:none;}\
-.iex_floating_image_video.iex_floating_image_video_not_ready{visibility:hidden;}\
-.iex_floating_image_zoom_border{display:block;position:absolute;border:0.08em solid #ffffff;opacity:0.25;}\
-.iex_floating_image_zoom_border_inner{display:block;position:absolute;border:0.08em solid #000000;left:0;top:0;bottom:0;right:0;}\
-.iex_floating_image_zoom_border.iex_floating_image_zoom_border_hidden{opacity:0;visibility:hidden;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_vertical):not(.iex_floating_image_zoom_border_horizontal){opacity:0;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_vertical){top:0 !important;bottom:0 !important;border-top:0em hidden;border-bottom:0em hidden;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_horizontal){left:0 !important;right:0 !important;border-left:0em hidden;border-right:0em hidden;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_vertical)>.iex_floating_image_zoom_border_inner{border-top:0em hidden;border-bottom:0em hidden;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_horizontal)>.iex_floating_image_zoom_border_inner{border-left:0em hidden;border-right:0em hidden;}\
-.iex_floating_image_stats_container{display:block;position:absolute;padding:0.125em 0em 0em 0.5em;left:-0.5em;right:0;bottom:100%;white-space:nowrap;overflow:hidden;color:#ffffff;text-shadow:0em 0em 0.4em #000000,0em 0em 0.3em #000000;}\
-.iex_floating_image_stats_container.iex_dark{color:#000000;text-shadow:0em 0em 0.4em #ffffff,0em 0em 0.3em #ffffff;}\
-.iex_floating_image_stat{}\
-.iex_floating_image_stats_sep{opacity:0.825;}\
-.iex_floating_image_stats_hidden{display:none;}\
-.iex_floating_image_stats_status{font-weight:bold;}\
-.iex_floating_image_stats_status.iex_floating_image_stats_status_error{color:#f03030;}\
-.iex_floating_image_stats_status.iex_floating_image_stats_status_error.iex_dark{color:#a00000;}\
-.iex_floating_image_stats_status.iex_floating_image_stats_status_archive{color:#f09030;}\
-.iex_floating_image_stats_status.iex_floating_image_stats_status_archive.iex_dark{color:#a06000;}\
-.iex_floating_image_stats_zoom{font-weight:bold;}\
-.iex_floating_image_stats_zoom_fit{font-weight:bold;}\
-.iex_floating_image_stats_resolution{font-weight:bold;}\
-.iex_floating_image_stats_size{font-weight:bold;}\
-.iex_floating_image_stats_name{font-weight:bold;}\
-.iex_floating_image_stats_container.iex_floating_image_stats_container_minimal>.iex_floating_image_stat:not(.iex_floating_image_stats_important),\
-.iex_floating_image_stats_container.iex_floating_image_stats_container_very_minimal>.iex_floating_image_stat:not(.iex_floating_image_stats_very_important){display:none;}\
-.iex_floating_image_connector{display:none;position:absolute;z-index:100;}\
-.iex_floating_image_connector.iex_floating_image_connector_visible{display:block;}\
-.iex_floating_image_stats_zoom_controls{margin-right:0.25em;position:absolute;}\
-.iex_floating_image_stats_zoom_controls.iex_floating_image_stats_zoom_controls_hidden{display:none;}\
-.iex_floating_image_stats_zoom_controls.iex_floating_image_stats_zoom_controls_fixed{position:fixed;}\
-.iex_floating_image_stats_zoom_control{padding:0em 0.25em;cursor:pointer;}\
-.iex_floating_image_stats_zoom_control_increase:hover{color:#80d0ff;}\
-.iex_floating_image_stats_zoom_control_decrease:hover{color:#f08060;}\
-.iex_floating_image_stats_zoom_control_increase.iex_dark:hover{color:#a0e0ff;}\
-.iex_floating_image_stats_zoom_control_decrease.iex_dark:hover{color:#ffb0a0;}\
-\
-.iex_floating_image_overlay_controls_container{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background:transparent;font-size:1.5em;}\
-.iex_floating_image_overlay_controls_inner_container{display:block;position:absolute;left:0;bottom:0;right:0;padding-top:2em;height:2em;background:transparent;}\
-.iex_floating_image_overlay_controls_table{display:table;width:100%;height:100%;}\
-.iex_floating_image_overlay_controls_table:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important):not(.iex_floating_image_overlay_controls_table_mini){display:none;}\
-.iex_floating_image_overlay_controls_seek_container{display:table-cell;vertical-align:bottom;min-width:1em;}\
-.iex_floating_image_overlay_controls_seek_container2{display:block;width:100%;height:2em;position:relative;}\
-.iex_floating_image_overlay_controls_seek_bar{display:block;position:absolute;left:0;right:0;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
-.iex_floating_image_overlay_controls_seek_bar.iex_floating_image_overlay_controls_no_border_radius{border-radius:0;}\
-.iex_floating_image_overlay_controls_seek_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#c0c0c0;opacity:0.825;}\
-.iex_floating_image_overlay_controls_seek_bar_loaded{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffffff;}\
-.iex_floating_image_overlay_controls_seek_bar_played{position:absolute;left:0;top:0;bottom:0;width:0;background:#66cc33;}\
-.iex_floating_image_overlay_controls_seek_time_table{position:relative;display:table;width:100%;height:100%;font-size:0.625em;}\
-.iex_floating_image_overlay_controls_seek_time_current{display:table-cell;text-align:left;vertical-align:middle;padding:0em 0.25em 0em 0.375em;}\
-.iex_floating_image_overlay_controls_seek_time_duration{display:table-cell;text-align:right;vertical-align:middle;padding:0em 0.375em 0em 0.25em;}\
-.iex_floating_image_overlay_controls_seek_time_current,\
-.iex_floating_image_overlay_controls_seek_time_duration{color:#101010;text-shadow:0em 0.125em 0.125em #ffffff,0em 0.0625em 0.0625em #ffffff;}\
-.iex_floating_image_overlay_controls_buttons_container{display:table-cell;vertical-align:bottom;width:2em;}\
-.iex_floating_image_overlay_controls_buttons_container2{display:block;width:100%;height:2em;position:relative;}\
-.iex_floating_image_overlay_controls_buttons_container_left{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}\
-.iex_floating_image_overlay_controls_buttons_container_right{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}\
-.iex_floating_image_overlay_controls_buttons_container_right_upper{display:block;position:absolute;bottom:100%;right:0;margin-bottom:-0.5em;}\
-.iex_floating_image_overlay_controls_volume_container{width:2em;height:9em;position:relative;}\
-.iex_floating_image_overlay_controls_volume_container:not(.iex_floating_image_overlay_controls_volume_container_visible):not(.iex_floating_image_overlay_controls_volume_container_visible_important){display:none;}\
-.iex_floating_image_overlay_controls_volume_bar{position:absolute;left:0.5em;right:0.5em;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
-.iex_floating_image_overlay_controls_volume_bar.iex_floating_image_overlay_controls_no_border_radius{border-radius:0;}\
-.iex_floating_image_overlay_controls_volume_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#ffffff;opacity:0.825;}\
-.iex_floating_image_overlay_controls_volume_bar_level{position:absolute;left:0;right:0;bottom:0;height:0;background-color:#ffbb50;}\
-\
-.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>.iex_floating_image_overlay_controls_buttons_container{display:none;}\
-.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>.iex_floating_image_overlay_controls_seek_container{min-width:0;}\
-.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>.iex_floating_image_overlay_controls_seek_container2{height:0.125em;}\
-.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>*>.iex_floating_image_overlay_controls_seek_bar{top:0;bottom:0;border-radius:0;border:0em hidden;}\
-.iex_floating_image_overlay_controls_table.iex_floating_image_overlay_controls_table_mini:not(.iex_floating_image_overlay_controls_table_visible):not(.iex_floating_image_overlay_controls_table_visible_important)>*>*>*>*>.iex_floating_image_overlay_controls_seek_time_table{display:none;}\
-\
-.iex_floating_image_overlay_button_mouse_controller{position:absolute;left:0;top:0;bottom:0;right:0;margin:0.4em;cursor:pointer;}\
-.iex_floating_image_overlay_play_button{display:block;}\
-.iex_floating_image_overlay_play_button.iex_floating_image_overlay_play_button_playing>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_play_icon,\
-.iex_floating_image_overlay_play_button.iex_floating_image_overlay_play_button_playing>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_loop_icon,\
-.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_pause_icon,\
-.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing).iex_floating_image_overlay_play_button_looping>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_play_icon,\
-.iex_floating_image_overlay_play_button:not(.iex_floating_image_overlay_play_button_playing):not(.iex_floating_image_overlay_play_button_looping)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_play_button_loop_icon{visibility:hidden;}\
-.iex_floating_image_overlay_volume_button{display:block;}\
-.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_muted>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_big,\
-.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_muted>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
-.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_muted)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_mute_icon,\
-.iex_floating_image_overlay_volume_button.iex_floating_image_overlay_volume_button_high>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
-.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_medium)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_small,\
-.iex_floating_image_overlay_volume_button:not(.iex_floating_image_overlay_volume_button_high)>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_wave_big{visibility:hidden;}\
-.iex_floating_image_overlay_volume_button_mute_icon{opacity:0.75;}\
-.iex_floating_image_overlay_volume_button_mute_icon_polygon{fill:#000000;}\
-.iex_floating_image_overlay_button_fill{fill:rgba(255,255,255,0.825);stroke:rgba(0,0,0,0.5);stroke-width:1px;vector-effect:non-scaling-stroke;}\
-.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_play_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_button_fill{fill:#44aaff;}\
-.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_volume_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_button_fill{fill:#ff88aa;}\
-.iex_floating_image_overlay_button_mouse_controller:hover+.iex_floating_image_overlay_volume_button>.iex_floating_image_overlay_button_scale_group>.iex_floating_image_overlay_volume_button_mute_icon>.iex_floating_image_overlay_volume_button_mute_icon_polygon{fill:#a00000;}\
-\
-.iex_floating_image_zoom_border.iex_floating_image_zoom_border_hidden.iex_animated{transition:opacity 0.5s linear 0s,visibility 0s linear 0.5s;}\
-.iex_floating_image_zoom_border:not(.iex_floating_image_zoom_border_hidden).iex_animated{transition:opacity 0.25s linear 0s,visibility 0s linear 0s;}\
-.iex_floating_image_background.iex_animated{transition:opacity 0.5s linear 0s;}\
-				'
-			"";//}
-
-
-
 			// Append style
-			this.stylesheet = document.createElement("style");
-			this.stylesheet.innerHTML = stylesheet_text;
-			ASAP.asap(on_insert_stylesheet.bind(this), on_insert_stylesheet_condition);
+			this.stylesheet = null;
 
 			// Observers
 			this.head_observer = null;
@@ -4395,6 +4334,238 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 		Style.prototype = {
 			constructor: Style,
 
+			insert_stylesheet: function () {
+				// Create stylesheet
+				var stylesheet_text = "";
+				stylesheet_text += //{ Stylesheet
+					'\
+body.iex_hide_other_settings #settingsMenu,\
+body.iex_hide_other_settings #overlay,\
+body.iex_hide_other_settings #appchanx-settings,\
+body.iex_hide_other_settings #fourchanx-settings{visibility:hidden !important;}\
+\
+.iex_no_padding_br{padding-bottom:0 !important;padding-right:0 !important;margin-bottom:0 !important;margin-right:0 !important;border-bottom-width:0 !important;border-right-width:0 !important;}\
+.iex_no_padding_tl{padding-top:0 !important;padding-left:0 !important;margin-top:0 !important;margin-left:0 !important;border-top-width:0 !important;border-left-width:0 !important;}\
+\
+.iex_settings_popup_overlay{position:fixed;z-index:200;left:0;top:0;bottom:0;right:0;font-size:14px;background:rgba(0,0,0,0.25);}\
+.iex_settings_popup_overlay.iex_dark{background:rgba(255,255,255,0.25);}\
+.iex_settings_popup{margin:0;padding:0;width:100%;height:100%;text-align:center;white-space:nowrap;z-index:200;line-height:0;}\
+.iex_settings_popup_aligner{height:100%;width:0;display:inline-block;vertical-align:middle;}\
+.iex_settings_popup_inner{display:inline-block;vertical-align:middle;text-align:left;line-height:normal;white-space:normal;position:relative;width:40em;height:80%;min-height:14em;}\
+.iex_settings_popup_table{display:table;position:relative;table-layout:fixed;width:100%;height:100%;box-shadow:0 0 1em 0.25em #000000;}\
+.iex_settings_popup_table.iex_dark{box-shadow:0 0 1em 0.25em #ffffff;}\
+.iex_settings_popup_top{display:table-row;width:100%;}\
+.iex_settings_popup_top_content{display:table;width:100%;background:rgba(0,0,0,0.0625);}\
+.iex_settings_popup_top_content.iex_dark{background:rgba(255,255,255,0.0625);}\
+.iex_settings_popup_top_label{display:table-cell;vertical-align:middle;padding:0.25em;font-size:1.125em;font-weight:bold;text-shadow:0 0.0625em 0.25em #ffffff;}\
+.iex_settings_popup_top_label.iex_dark{text-shadow:0 0.0625em 0.25em #000000;}\
+.iex_settings_popup_top_right{display:table-cell;vertical-align:middle;padding:0.25em;text-align:right;}\
+.iex_settings_popup_middle{display:table-row;width:100%;height:100%;}\
+.iex_settings_popup_middle_content_pad{display:block;width:100%;height:100%;position:relative;}\
+.iex_settings_popup_middle_content{display:block;position:absolute;left:0;top:0;bottom:0;right:0;padding:0;overflow:auto;}\
+.iex_settings_popup_middle_content_inner{display:block;padding:0.25em;}\
+.iex_settings_popup_close_link{font-weight:bold;text-decoration:none !important;padding:0em 0.2em;}\
+.iex_settings_popup_bottom{display:table-row;width:100%;}\
+\
+.iex_settings_container{position:relative;}\
+.iex_settings_region_container{margin:0.25em -0.25em -0.25em 2em;}\
+.iex_settings_region{}\
+.iex_settings_group{}\
+.iex_settings_group.iex_settings_group_hidden{display:none;}\
+.iex_settings_group_label{font-size:1.125em;padding-bottom:0.125em;margin-bottom:0.25em;font-weight:bold;text-align:left;color:#000000;border-bottom:0.125em solid rgba(0,0,0,0.5);text-shadow:0em 0em 0.25em #ffffff;}\
+.iex_settings_group_label.iex_dark{color:#ffffff;border-bottom:0.125em solid rgba(255,255,255,0.5);text-shadow:0em 0em 0.25em #000000;}\
+.iex_settings_group.iex_settings_group_padding_top{margin-top:1em;}\
+.iex_settings_setting{padding:0.25em;background:transparent;}\
+.iex_settings_setting.iex_settings_setting_top_padding{margin-top:0.25em;}\
+.iex_settings_setting.iex_settings_setting_hidden{display:none;}\
+.iex_settings_setting.iex_settings_setting_odd{background:rgba(0,0,0,0.0625);}\
+.iex_settings_setting.iex_settings_setting_odd.iex_dark{background:rgba(255,255,255,0.0625);}\
+.iex_settings_setting_table{display:block;width:100%;}\
+.iex_settings_setting_left{display:block;overflow:hidden;text-align:left;vertical-align:top;}\
+.iex_settings_setting_right{display:inline-block;float:right;text-align:right;vertical-align:middle;padding:0.5em 0em;}\
+.iex_settings_setting_label{display:block;}\
+.iex_settings_setting_label_title{color:#000000;font-weight:bold;font-size:1.125em;vertical-align:baseline;}\
+.iex_settings_setting_label_title.iex_dark{color:#ffffff;}\
+.iex_settings_setting_label_subtitle{color:#000000;font-weight:bold;font-size:1em;vertical-align:baseline;opacity:0.625;margin-left:0.5em;}\
+.iex_settings_setting_label_subtitle.iex_dark{color:#ffffff;}\
+.iex_settings_setting_label_subtitle:before{content:"(";}\
+.iex_settings_setting_label_subtitle:after{content:")";}\
+.iex_settings_setting_description{margin-left:0.5em;}\
+.iex_settings_setting_input_container{display:inline-block;white-space:nowrap;cursor:pointer;}\
+.iex_settings_setting_input_container.iex_settings_setting_input_container_reverse{direction:rtl;}\
+.iex_settings_setting_input_checkbox{vertical-align:middle;}\
+.iex_settings_setting_input_checkbox+.iex_settings_setting_input_label,\
+.iex_settings_setting_input_checkbox+*+.iex_settings_setting_input_label{vertical-align:middle;padding-right:0.5em;}\
+.iex_settings_setting_input_checkbox+.iex_settings_setting_input_label:after,\
+.iex_settings_setting_input_checkbox+*+.iex_settings_setting_input_label:after{content:attr(data-iex-checkbox-label-off);}\
+.iex_settings_setting_input_checkbox:checked+.iex_settings_setting_input_label:after,\
+.iex_settings_setting_input_checkbox:checked+*+.iex_settings_setting_input_label:after{content:attr(data-iex-checkbox-label-on);}\
+input.iex_settings_setting_input_textbox{width:5em;padding:0.125em;border:1px solid rgba(16,16,16,0.5) !important;}\
+input.iex_settings_setting_input_textbox:focus{border-color:rgba(16,16,16,1) !important;}\
+input.iex_settings_setting_input_textbox.iex_dark{border-color:rgba(240,240,240,0.5) !important;}\
+input.iex_settings_setting_input_textbox.iex_dark:focus{border-color:rgba(240,240,240,1) !important;}\
+.iex_settings_difficulty_container{position:absolute;right:0;top:0;margin-top:0.5em;}\
+.iex_settings_popup a.iex_settings_difficulty_choice{cursor:pointer;text-decoration:none !important;}\
+.iex_settings_popup a.iex_settings_difficulty_choice.iex_settings_difficulty_choice_selected{text-decoration:underline !important;}\
+.iex_settings_popup a.iex_settings_homepage_link{text-decoration:none !important;}\
+.iex_settings_difficulty_separator{}\
+\
+.iex_notification{position:fixed;left:0;top:0;bottom:0;right:0;z-index:100;background:rgba(255,255,255,0.5);font-size:14px;}\
+.iex_notification.iex_dark{background:rgba(0,0,0,0.5);}\
+.iex_notification_body_outer{margin:0;padding:0;width:100%;height:100%;text-align:center;white-space:nowrap;z-index:200;line-height:0;}\
+.iex_notification_body_aligner{height:100%;width:0;display:inline-block;vertical-align:middle;}\
+.iex_notification_body_inner{display:inline-block;vertical-align:middle;line-height:normal;}\
+.iex_notification_body{position:relative;text-align:center;white-space:normal;width:36em;padding:0.375em 1em;border-radius:0.25em;box-shadow:0em 0em 0.25em 0.125em rgba(0,0,0,0.5);}\
+.iex_notification_body.iex_dark{box-shadow:0em 0em 0.25em 0.125em rgba(255,255,255,0.5);}\
+.iex_notification_body.iex_notification_info{background:rgba(0,120,220,0.9);}\
+.iex_notification_body.iex_notification_success{background:rgba(0,168,20,0.9);}\
+.iex_notification_body.iex_notification_error{background:rgba(220,0,0,0.9);}\
+.iex_notification_body.iex_notification_warning{background:rgba(220,120,0,0.9);}\
+a.iex_notification_close{color:#ffffff !important;position:absolute;top:0;right:0;z-index:10;cursor:pointer;font-weight:bold;}\
+a.iex_notification_close:hover{color:#000000 !important;text-shadow:0em 0.0625em 0.125em #ffffff;}\
+a.iex_notification_close.iex_notification_close_hidden{display:none;}\
+.iex_notification_content_outer{position:relative;}\
+.iex_notification_content{position:relative;}\
+.iex_notification_content_title{font-weight:bold;margin-bottom:0.75em;color:#ffffff;text-shadow:0em 0.0625em 0.125em #000000;}\
+.iex_notification_content_body{color:#ffffff;text-shadow:0em 0.0625em 0.125em rgba(0,0,0,0.5);}\
+.iex_notification_content a{color:#ffffff !important;text-decoration:none;}\
+.iex_notification_content a:hover{color:#c010e0 !important;}\
+.iex_notification_content.iex_dark a:hover{color:#d040e8 !important;}\
+.iex_notification_content .iex_spaced_div{margin-bottom:0.5em;}\
+.iex_notification_content a.iex_highlighted_link{font-weight:bold;text-decoration:underline !important;}\
+.iex_notification_content a.iex_underlined_link{text-decoration:underline !important;}\
+textarea.iex_notification_textarea{width:100%;height:5em;min-height:2em;font-family:Courier New;font-size:1em;text-align:left;color:#ffffff !important;background-color:transparent !important;border:0.08em solid rgba(255,255,255,0.5) !important;padding:0.25em;margin:0;resize:vertical;box-sizing:border-box;-moz-box-sizing:border-box;}\
+textarea.iex_notification_textarea:hover,\
+textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.0625) !important;border:0.08em solid rgba(255,255,255,0.75) !important;}\
+\
+\
+.iex_floating_container{display:block;margin:0;padding:0;border:0em hidden;}\
+.iex_floating_image_connector{display:block;position:absolute;z-index:100;}\
+.iex_floating_image_connector:not(.iex_floating_image_connector_visible){display:none;}\
+\
+.iex_cpreview_container{display:block;position:absolute;z-index:100;}\
+.iex_cpreview_container.iex_cpreview_container_fixed{position:fixed;}\
+.iex_cpreview_container:not(.iex_cpreview_container_visible){display:none;}\
+.iex_cpreview_padding{display:block;position:relative;margin:0;padding:0;left:0;top:0;}\
+.iex_cpreview_overflow{display:block;position:relative;overflow:hidden;}\
+.iex_cpreview_offset{display:block;position:relative;width:100%;height:100%;}\
+.iex_cpreview_overlay{}\
+.iex_cpreview_content{}\
+\
+.iex_cpreview_padding.iex_mpreview_padding{box-shadow:0em 0em 0.6em 0.3em rgba(0,0,0,0.75);background-color:rgba(255,255,255,0.5);}\
+.iex_cpreview_padding.iex_mpreview_padding.iex_dark{box-shadow:0em 0em 0.6em 0.3em rgba(255,255,255,0.75);background-color:rgba(0,0,0,0.5);}\
+.iex_cpreview_padding.iex_mpreview_mouse_hidden{cursor:none;}\
+\
+.iex_mpreview_background{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background-color:transparent;background-repeat:no-repeat;background-position:left top;background-size:100% 100%;opacity:0.375;}\
+.iex_mpreview_background.iex_mpreview_background_disabled{opacity:0;visibility:hidden;}\
+.iex_mpreview_background.iex_mpreview_background_visible_full{opacity:1;}\
+.iex_mpreview_background:not(.iex_mpreview_background_visible){display:none;}\
+.iex_mpreview_background.iex_transitions.iex_mpreview_background_visible{transition:opacity 0.5s, visibility 0s linear 0s;}\
+.iex_mpreview_background.iex_transitions.iex_mpreview_background_visible.iex_mpreview_background_disabled{transition:opacity 0.5s, visibility 0s linear 0.5s;}\
+\
+.iex_mpreview_zoom_borders{display:block;position:absolute;border:0.08em solid #ffffff;opacity:0.25;left:0;top:0;bottom:0;right:0;}\
+.iex_mpreview_zoom_borders_inner{display:block;position:absolute;border:0.08em solid #000000;left:0;top:0;bottom:0;right:0;}\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_visible),\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_vertical):not(.iex_mpreview_zoom_borders_horizontal){opacity:0;visibility:hidden;}\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_vertical){top:0 !important;bottom:0 !important;border-top:0 hidden;border-bottom:0 hidden;}\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_horizontal){left:0 !important;right:0 !important;border-left:0 hidden;border-right:0 hidden;}\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_vertical)>.iex_mpreview_zoom_borders_inner{border-top:0 hidden;border-bottom:0 hidden;}\
+.iex_mpreview_zoom_borders:not(.iex_mpreview_zoom_borders_horizontal)>.iex_mpreview_zoom_borders_inner{border-left:0 hidden;border-right:0 hidden;}\
+\
+.iex_mpreview_stats_container{display:block;position:absolute;padding:0.125em 0em 0em 0.5em;left:-0.5em;right:0;bottom:100%;white-space:nowrap;overflow:hidden;color:#ffffff;text-shadow:0em 0em 0.4em #000000,0em 0em 0.3em #000000;}\
+.iex_mpreview_stats_container.iex_dark{color:#000000;text-shadow:0em 0em 0.4em #ffffff,0em 0em 0.3em #ffffff;}\
+.iex_mpreview_stat{font-weight:bold;}\
+.iex_mpreview_stat.iex_mpreview_stat_red{color:#f03030;}\
+.iex_mpreview_stat.iex_mpreview_stat_red.iex_dark{color:#a00000;}\
+.iex_mpreview_stat_sep{opacity:0.825;}\
+.iex_mpreview_stat:not(.iex_mpreview_stat_visible),\
+.iex_mpreview_stat_sep:not(.iex_mpreview_stat_sep_visible){display:none;}\
+\
+.iex_mpreview_stat.iex_mpreview_stat_zoom_controls{margin-right:0.25em;position:absolute;}\
+.iex_mpreview_stat.iex_mpreview_stat_zoom_controls.iex_mpreview_stat_zoom_controls_fixed{position:fixed;}\
+.iex_mpreview_stat_zoom_controls_offset{display:none;}\
+.iex_mpreview_stat.iex_mpreview_stat_zoom_controls.iex_mpreview_stat_visible+.iex_mpreview_stat_zoom_controls_offset{display:inline-block;}\
+.iex_mpreview_stat_zoom_control{padding:0em 0.25em;cursor:pointer;}\
+.iex_mpreview_stat_zoom_control_increase:hover{color:#80d0ff;}\
+.iex_mpreview_stat_zoom_control_increase.iex_dark:hover{color:#a0e0ff;}\
+.iex_mpreview_stat_zoom_control_decrease:hover{color:#f08060;}\
+.iex_mpreview_stat_zoom_control_decrease.iex_dark:hover{color:#ffb0a0;}\
+\
+.iex_mpreview_image{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_mpreview_image:not(.iex_mpreview_image_visible){display:none;}\
+.iex_mpreview_image.iex_mpreview_image_unsized{max-width:100%;max-height:100%;}\
+\
+.iex_mpreview_video{display:block;position:absolute;left:0;top:0;bottom:0;right:0;width:100%;height:100%;border:0em hidden;margin:0;padding:0;outline:0em hidden;}\
+.iex_mpreview_video:not(.iex_mpreview_video_visible){display:none;}\
+.iex_mpreview_video.iex_mpreview_video_unsized{max-width:100%;max-height:100%;}\
+.iex_mpreview_video.iex_mpreview_video_not_ready{visibility:hidden;}\
+\
+.iex_mpreview_vcontrols_container{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background:transparent;font-size:1.5em;}\
+.iex_mpreview_vcontrols_container_inner{display:block;position:absolute;left:0;bottom:0;right:0;padding-top:2em;height:2em;background:transparent;}\
+.iex_mpreview_vcontrols_table{display:table;width:100%;height:100%;}\
+.iex_mpreview_vcontrols_table:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important):not(.iex_mpreview_vcontrols_table_mini){display:none;}\
+.iex_mpreview_vcontrols_seek_container{display:table-cell;vertical-align:bottom;min-width:1em;}\
+.iex_mpreview_vcontrols_seek_container_inner{display:block;width:100%;height:2em;position:relative;}\
+.iex_mpreview_vcontrols_seek_bar{display:block;position:absolute;left:0;right:0;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
+.iex_mpreview_vcontrols_seek_bar.iex_mpreview_vcontrols_no_border_radius{border-radius:0;}\
+.iex_mpreview_vcontrols_seek_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#c0c0c0;opacity:0.825;}\
+.iex_mpreview_vcontrols_seek_bar_loaded{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffffff;}\
+.iex_mpreview_vcontrols_seek_bar_played{position:absolute;left:0;top:0;bottom:0;width:0;background:#66cc33;}\
+.iex_mpreview_vcontrols_seek_time_table{position:relative;display:table;width:100%;height:100%;font-size:0.625em;}\
+.iex_mpreview_vcontrols_seek_time_current{display:table-cell;text-align:left;vertical-align:middle;padding:0em 0.25em 0em 0.375em;}\
+.iex_mpreview_vcontrols_seek_time_duration{display:table-cell;text-align:right;vertical-align:middle;padding:0em 0.375em 0em 0.25em;}\
+.iex_mpreview_vcontrols_seek_time_current,\
+.iex_mpreview_vcontrols_seek_time_duration{color:#101010;text-shadow:0em 0.125em 0.125em #ffffff,0em 0.0625em 0.0625em #ffffff;}\
+\
+.iex_mpreview_vcontrols_volume_container_position{display:block;position:absolute;bottom:100%;right:0;margin-bottom:-0.5em;}\
+.iex_mpreview_vcontrols_volume_container{width:2em;height:9em;position:relative;}\
+.iex_mpreview_vcontrols_volume_container:not(.iex_mpreview_vcontrols_volume_container_visible):not(.iex_mpreview_vcontrols_volume_container_visible_important){display:none;}\
+.iex_mpreview_vcontrols_volume_bar{position:absolute;left:0.5em;right:0.5em;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}\
+.iex_mpreview_vcontrols_volume_bar.iex_mpreview_vcontrols_no_border_radius{border-radius:0;}\
+.iex_mpreview_vcontrols_volume_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#ffffff;opacity:0.825;}\
+.iex_mpreview_vcontrols_volume_bar_level{position:absolute;left:0;right:0;bottom:0;height:0;background-color:#ffbb50;}\
+\
+.iex_mpreview_vcontrols_button_container{display:table-cell;vertical-align:bottom;width:2em;}\
+.iex_mpreview_vcontrols_button_container_inner{display:block;width:100%;height:2em;position:relative;}\
+.iex_mpreview_vcontrols_button_container_inner2{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}\
+.iex_mpreview_vcontrols_button_mouse_controller{position:absolute;left:0;top:0;bottom:0;right:0;margin:0.4em;cursor:pointer;}\
+\
+.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_button_container{display:none;}\
+.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_seek_container{min-width:0;}\
+.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>.iex_mpreview_vcontrols_seek_container_inner{height:0.125em;}\
+.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>.iex_mpreview_vcontrols_seek_bar{top:0;bottom:0;border-radius:0;border:0 hidden;}\
+.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>*>*>.iex_mpreview_vcontrols_seek_time_table{display:none;}\
+\
+.iex_svg_play_button{display:block;}\
+.iex_svg_play_button.iex_svg_play_button_playing>.iex_svg_button_scale_group>.iex_svg_play_button_play_icon,\
+.iex_svg_play_button.iex_svg_play_button_playing>.iex_svg_button_scale_group>.iex_svg_play_button_loop_icon,\
+.iex_svg_play_button:not(.iex_svg_play_button_playing)>.iex_svg_button_scale_group>.iex_svg_play_button_pause_icon,\
+.iex_svg_play_button:not(.iex_svg_play_button_playing).iex_svg_play_button_looping>.iex_svg_button_scale_group>.iex_svg_play_button_play_icon,\
+.iex_svg_play_button:not(.iex_svg_play_button_playing):not(.iex_svg_play_button_looping)>.iex_svg_button_scale_group>.iex_svg_play_button_loop_icon{visibility:hidden;}\
+.iex_svg_volume_button{display:block;}\
+.iex_svg_volume_button.iex_svg_volume_button_muted>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_big,\
+.iex_svg_volume_button.iex_svg_volume_button_muted>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_small,\
+.iex_svg_volume_button:not(.iex_svg_volume_button_muted)>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_mute_icon,\
+.iex_svg_volume_button.iex_svg_volume_button_high>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_small,\
+.iex_svg_volume_button:not(.iex_svg_volume_button_medium)>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_small,\
+.iex_svg_volume_button:not(.iex_svg_volume_button_high)>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_big{visibility:hidden;}\
+.iex_svg_volume_button_wave_mute_icon{opacity:0.75;}\
+.iex_svg_volume_button_wave_mute_icon_polygon{fill:#000000;}\
+.iex_svg_button_fill{fill:rgba(255,255,255,0.825);stroke:rgba(0,0,0,0.5);stroke-width:1px;vector-effect:non-scaling-stroke;}\
+.iex_mpreview_vcontrols_button_mouse_controller:hover+.iex_svg_play_button>.iex_svg_button_scale_group>.iex_svg_button_fill{fill:#44aaff;}\
+.iex_mpreview_vcontrols_button_mouse_controller:hover+.iex_svg_volume_button>.iex_svg_button_scale_group>.iex_svg_button_fill{fill:#ff88aa;}\
+.iex_mpreview_vcontrols_button_mouse_controller:hover+.iex_svg_volume_button>.iex_svg_button_scale_group>.iex_svg_volume_button_wave_mute_icon>.iex_svg_volume_button_wave_mute_icon_polygon{fill:#a00000;}\
+\
+'
+				"";//}
+
+
+				// Append style
+				this.stylesheet = document.createElement("style");
+				this.stylesheet.innerHTML = stylesheet_text;
+				ASAP.asap(on_insert_stylesheet.bind(this), on_insert_stylesheet_condition);
+			},
+
 			theme_detect: function () {
 				// Theme detection
 				var doc = document.documentElement,
@@ -4536,6 +4707,36 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 				if (newCls != oldCls) element.setAttribute("class", newCls);
 			},
+			change_classes_svg: function (element, classnames_add, classnames_remove) {
+				var oldCls = element.getAttribute("class"),
+					newCls = oldCls,
+					i, reg;
+
+				// Add classes
+				if (classnames_add) {
+					classnames_add = classnames_add.split(" ");
+					for (i = 0; i < classnames_add.length; ++i) {
+						reg = new RegExp("(\\s|^)" + classnames_add[i] + "(\\s|$)");
+						if (!reg.test(newCls)) {
+							newCls += " " + classnames_add[i];
+						}
+					}
+				}
+
+				// Remove classes
+				if (classnames_remove) {
+					classnames_remove = classnames_remove.split(" ");
+					for (i = 0; i < classnames_remove.length; ++i) {
+						reg = new RegExp("(\\s|^)" + classnames_remove[i] + "(\\s|$)", "g");
+						newCls = newCls.replace(reg, " ");
+					}
+				}
+
+				// Update class
+				if ((newCls = newCls.trim()) != oldCls) {
+					element.setAttribute("class", newCls);
+				}
+			},
 
 			get_true_style_of_class: function (class_name, style_name, tag_name, parent_node) {
 				var e = document.createElement(tag_name || "div"),
@@ -4606,6 +4807,77 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			},
 			color_to_css: function (color) {
 				return "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + color[3] + ")";
+			},
+
+			get_window_rect: function () {
+				var doc = document.documentElement,
+					left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0),
+					top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
+
+				return {
+					left: left,
+					top: top,
+					right: left + (window.innerWidth || doc.clientWidth || 0),
+					bottom: top + (window.innerHeight || doc.clientHeight || 0),
+				};
+			},
+			get_document_rect: function () {
+				var doc = document.documentElement,
+					left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0),
+					top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
+
+				return {
+					left: left,
+					top: top,
+					right: left + (doc.clientWidth || window.innerWidth || 0),
+					bottom: top + (doc.clientHeight || window.innerHeight || 0),
+				};
+			},
+			get_document_offset: function () {
+				var doc = document.documentElement;
+
+				return {
+					left: (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0),
+					top: (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0),
+				};
+			},
+			get_object_rect: function (obj) {
+				var bounds = obj.getBoundingClientRect(),
+					doc = document.documentElement,
+					left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0),
+					top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
+
+				return {
+					left: left + bounds.left,
+					top: top + bounds.top,
+					right: left + bounds.right,
+					bottom: top + bounds.bottom,
+				};
+			},
+			get_object_rect_inner: function (obj) {
+				// Document scroll offset
+				var doc = document.documentElement,
+					left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0),
+					top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0),
+					bounds0, bounds1, bounds2, b1_w, b1_h;
+
+				// Measure bounds with and without paddings
+				bounds0 = obj.getBoundingClientRect();
+				this.add_class(obj, "iex_no_padding_br");
+				bounds1 = obj.getBoundingClientRect();
+				this.add_class(obj, "iex_no_padding_tl");
+				bounds2 = obj.getBoundingClientRect();
+				this.remove_classes(obj, "iex_no_padding_br iex_no_padding_tl");
+
+				b1_w = bounds1.right - bounds1.left;
+				b1_h = bounds1.bottom - bounds1.top;
+
+				return {
+					left: left + bounds1.left + (b1_w - (bounds2.right - bounds2.left)),
+					top: top + bounds1.top + (b1_h - (bounds2.bottom - bounds2.top)),
+					right: left + bounds0.right + (b1_w - (bounds0.right - bounds0.left)),
+					bottom: top + bounds0.bottom + (b1_h - (bounds0.bottom - bounds0.top)),
+				};
 			},
 
 		};
@@ -4873,31 +5145,102 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 	var ImageHover = (function () {
 
 		var ImageHover = function () {
+			// Preview object
+			this.mpreview = null;
+
 			// Enabled
 			this.enabled = false;
 			this.disabled = false;
+			this.current_image_container = null;
 
 			// Extension settings
-			this.extensions_valid = [ ".jpg" , ".jpeg" , ".png" , ".gif" , ".webm" ];
-			this.extensions_video = [ ".webm" ];
-			this.extensions_display_bg = {
-				".jpg": true,
-				".jpeg": true,
-				".webm": true
+			this.extensions_valid = {
+				".jpg": {
+					ext: "jpg",
+					mime: "image/jpeg",
+					type: "image",
+				},
+				".jpeg": {
+					ext: "jpg",
+					mime: "image/jpeg",
+					type: "image",
+				},
+				".png": {
+					ext: "png",
+					mime: "image/png",
+					type: "image",
+				},
+				".gif": {
+					ext: "gif",
+					mime: "image/gif",
+					type: "image",
+				},
+				".webm": {
+					ext: "webm",
+					mime: "video/webm",
+					type: "video",
+				},
 			};
 
-			// Events
-			this.on_api_image_hover_open_bind = null;
-			this.hotkeys = null;
+			// Parent node
+			this.floating_container = null;
+			this.connector = null;
+
+			// Open and closing timers
+			this.preview_open_timer = null;
+			this.preview_close_timer = null;
+			this.zoom_borders_hide_timer = null;
+			this.mouse_hide_timer = null;
+
+			// Event bindings
+			this.on_image_mouseenter_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_mouseenter , null ]);
+			this.on_image_mouseleave_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_mouseleave , null ]);
+			this.on_image_connector_mouseenter_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_connector_mouseenter , null ]);
+			this.on_image_connector_mouseleave_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_connector_mouseleave , null ]);
+
+			this.on_image_click_bind = wrap_callback(on_image_click, [ this ]);
+
+			// More bindings
+			this.on_preview_close_timeout_bind = on_preview_close_timeout.bind(this);
+			this.on_preview_zoom_borders_hide_timeout_bind = on_preview_zoom_borders_hide_timeout.bind(this);
+			this.on_preview_mouse_hide_timeout_bind = on_preview_mouse_hide_timeout.bind(this);
+
+			this.on_preview_image_load_bind = on_preview_image_load.bind(this);
+			this.on_preview_image_error_bind = on_preview_image_error.bind(this);
+
+			this.on_preview_video_ready_bind = on_preview_video_ready.bind(this);
+			this.on_preview_video_can_play_bind = on_preview_video_can_play.bind(this);
+			this.on_preview_video_can_play_through_bind = on_preview_video_can_play_through.bind(this);
+			this.on_preview_video_load_bind = on_preview_video_load.bind(this);
+			this.on_preview_video_error_bind = on_preview_video_error.bind(this);
+			this.on_preview_video_volume_change_bind = on_preview_video_volume_change.bind(this);
+
+			this.on_preview_size_change_bind = on_preview_size_change.bind(this);
+
+			this.on_preview_mouse_wheel_bind = on_preview_mouse_wheel.bind(this);
+			this.on_preview_mouse_enter_bind = on_preview_mouse_enter.bind(this);
+			this.on_preview_mouse_leave_bind = on_preview_mouse_leave.bind(this);
+			this.on_preview_mouse_down_bind = on_preview_mouse_down.bind(this);
+			this.on_preview_mouse_move_bind = on_preview_mouse_move.bind(this);
+			this.on_preview_mouse_enter_main_bind = on_preview_mouse_enter_main.bind(this);
+
+			this.on_preview_stats_zoom_control_click_bind = on_preview_stats_zoom_control_click.bind(this);
+
+			this.on_image_connector_mousedown_bind = on_image_connector_mousedown.bind(this);
+
+			this.on_window_resize_bind = on_window_resize.bind(this);
+			this.on_window_scroll_bind = on_window_scroll.bind(this);
+
+			this.on_api_post_add_bind = on_api_post_add.bind(this);
+			this.on_api_post_remove_bind = on_api_post_remove.bind(this);
+			this.on_api_image_hover_open_bind = on_api_image_hover_open.bind(this);
 
 			// Callbacks
-			this.on_image_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_image_mouseenter , null ]);
-			this.on_image_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_image_mouseleave , null ]);
-			this.on_image_click_bind = wrap_callback.call(this, on_image_click, [ this ]);
 			this.on_settings_value_change_bind = on_settings_value_change.bind(this);
 			settings.on_change(["image_expansion", "hover", "zoom_invert"], this.on_settings_value_change_bind);
-			settings.on_change(["image_expansion", "hover", "zoom_border_show"], this.on_settings_value_change_bind);
-			settings.on_change(["image_expansion", "hover", "zoom_border_hide_time"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "hover", "zoom_borders_show"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "hover", "zoom_borders_hide_time"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "hover", "zoom_buttons"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "hover", "mouse_hide"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "hover", "mouse_hide_time"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "hover", "header_overlap"], this.on_settings_value_change_bind);
@@ -4909,43 +5252,22 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			settings.on_change(["image_expansion", "video", "volume"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "video", "mini_controls"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "style", "controls_rounded_border"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "style", "animations_background"], this.on_settings_value_change_bind);
 
-			// Close
-			this.preview_open_timer = null;
-			this.preview_close_timer = null;
-			this.on_preview_close_timeout_bind = on_preview_close_timeout.bind(this);
-
-			// Floating container
-			this.image_visible = false;
-			this.image_data = null;
+			// Settings
+			this.hotkeys = null;
+			this.mouse_x = 0;
+			this.mouse_y = 0;
+			this.paddings_active = false;
+			this.display_window_max = {
+				x: 0,
+				y: 0,
+				width: 0,
+				height: 0,
+			};
 			this.settings = {
-				image_container: null,
-				fit: false,
-				fit_large: false,
-				fit_axis: 0,
-				zoom: 1.0,
-				zoom_x: 0.0,
-				zoom_y: 0.0,
-				mouse_x: 0.0,
-				mouse_y: 0.0,
-				padding_active: false,
-				type: TYPE_NONE,
-				size: {
-					width: 0,
-					height: 0,
-				},
-				display_size: {
-					width: 0,
-					height: 0,
-				},
-				display_size_max: {
-					width: 0,
-					height: 0,
-				},
-				size_acquired: false,
-
 				fit_large_allowed: true,
-				display_stats: true,
+				display_stats: 0, // 0: all, 1: some, 2: none
 				zoom_limits: {
 					increase: 2.0,
 					decrease: 2.0,
@@ -4957,10 +5279,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					vertical: 0.1
 				},
 				zoom_invert: false,
-				zoom_border_show: true,
-				zoom_border_hide_time: 500,
+				zoom_borders_show: true,
+				zoom_borders_hide_time: 500,
+				zoom_buttons: true,
 				mouse_hide: true,
-				mouse_hide_time: 2000,
+				mouse_hide_time: 1000,
 				padding_extra: {
 					left: 10,
 					top: 10,
@@ -4983,798 +5306,18 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				},
 				style: {
 					controls_rounded_border: true,
+					animations_background: true,
 				},
 			};
+
+			// Setup
 			ASAP.asap(on_asap.bind(this), on_asap_condition);
-		};
-
-
-
-		var TYPE_NONE = 0;
-		var TYPE_IMAGE = 1;
-		var TYPE_VIDEO = 2;
-
-
-
-		var on_image_mouseenter = function (image_container, data, event) {
-			// Don't run if disabled
-			if (this.disabled) return;
-
-			// Attempt to open
-			var post_container = api.post_get_post_container_from_image_container(image_container);
-			if (post_container) {
-				preview_open_test.call(this, image_container, post_container, true);
-			}
-		};
-		var on_image_mouseleave = function (image_container, data, event) {
-			// Don't run if disabled
-			if (this.disabled) return;
-
-			// Close preview
-			this.preview_close(false);
-
-			// Cancel the open timer
-			if (this.preview_open_timer !== null) {
-				clearTimeout(this.preview_open_timer);
-				this.preview_open_timer = null;
-			}
-		};
-		var on_image_click = function (self, data, event) {
-			// Don't run if disabled
-			if (self.disabled) return;
-
-			// Close preview
-			var post_container = api.post_get_post_container_from_image_container(this);
-			setTimeout(on_image_click_delay.bind(self, this, post_container), 10);
-		};
-		var on_image_click_delay = function (node, post_container) {
-			if (api.post_is_image_expanded_or_expanding(post_container)) {
-				// Close
-				this.preview_close(true);
-			}
-			else {
-				// Attempt to open
-				preview_open_test.call(this, node, post_container, false);
-			}
-		};
-
-		var on_api_post_add = function (container) {
-			// Queue add hooks
-			this.post_queue.push(container);
-		};
-		var on_api_post_remove = function (container) {
-			// Remove hooks
-			remove_post_container_callbacks.call(this, container);
-		};
-		var on_api_image_hover_open = function () {
-			// Disable
-			if (this.disabled) return;
-			this.disable();
-
-			// Remove event
-			api.off("image_hover_open", this.on_api_image_hover_open_bind);
-			this.on_api_image_hover_open_bind = null;
-
-			// Update settings
-			settings.disable_image_expansion();
-		};
-
-		var on_post_queue_callback = function (container) {
-			// Add hooks
-			add_post_container_callbacks.call(this, container);
-		};
-
-		var on_connector_mouseenter = function (node, data, event) {
-			// Cancel close
-			this.preview_close_cancel();
-		};
-		var on_connector_mouseleave = function (node, data, event) {
-			// Activate close
-			this.preview_close(false);
-		};
-		var on_preview_mousewheel = function (event) {
-			// Get direction
-			var delta = (event.wheelDelta || -event.detail || 0);
-			if (delta < 0) delta = -1;
-			else if (delta > 0) delta = 1;
-
-			// Modify zoom
-			this.preview_update_zoom(delta, true);
-
-			// Show zoom borders and mouse
-			if (this.settings.zoom_border_show) show_zoom_border.call(this, false);
-			show_mouse.call(this, !this.settings.mouse_hide);
-
-			// Prevent
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_preview_mouseenter = function (node, data, event) {
-			// Cancel close
-			this.preview_close_cancel();
-
-			// Show zoom borders and mouse
-			if (this.settings.zoom_border_show) show_zoom_border.call(this, false);
-			show_mouse.call(this, !this.settings.mouse_hide);
-
-			// Mini controls
-			if (this.settings.type == TYPE_VIDEO) {
-				if (this.settings.video.mini_controls == 1) set_video_mini_controls_enabled.call(this, true);
-				else if (this.settings.video.mini_controls == 2) set_video_mini_controls_enabled.call(this, false);
-			}
-		};
-		var on_preview_mouseleave = function (node, data, event) {
-			// Activate close
-			this.preview_close(false);
-
-			// Hide zoom borders and show the mouse
-			hide_zoom_border.call(this, false);
-			show_mouse.call(this, true);
-
-			// Remove padding if enabled
-			if (this.settings.padding_active) {
-				// Remove
-				hide_paddings.call(this);
-			}
-
-			// Mini controls
-			if (this.settings.type == TYPE_VIDEO) {
-				if (this.settings.video.mini_controls == 1) set_video_mini_controls_enabled.call(this, false);
-				else if (this.settings.video.mini_controls == 2) set_video_mini_controls_enabled.call(this, true);
-			}
-		};
-		var on_preview_mousedown = function (event) {
-			// Get the mouse button
-			var button = 0; // 1=left, 2=middle, 3=right
-            if (event.which) {
-				if (event.which == 1) button = 1;
-				else if (event.which == 2) button = 2;
-				else if (event.which == 3) button = 3;
-            }
-			else {
-				if ((event.button & 1) != 0) button = 1;
-				else if ((event.button & 2) != 0) button = 3;
-				else if ((event.button & 4) != 0) button = 2;
-			}
-
-			// Activate close
-			if (button != 3) this.preview_close(true);
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_preview_contextmenu = function (event) {
-			// Stop
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_preview_mousemove = function (event) {
-			// Get mouse x/y
-			var x, y;
-			if (event.pageX == null && (event = event || window.event).clientX != null) {
-				var html = document.documentElement, body = document.body;
-				if (html && body) {
-					x = ((event.clientX || 0) + (html.scrollLeft || (body && body.scrollLeft) || 0)) - (html.clientLeft || 0);
-					y = ((event.clientY || 0) + (html.scrollTop || (body && body.scrollTop) || 0)) - (html.clientTop || 0);
-				}
-			}
-			else {
-				x = event.pageX || 0;
-				y = event.pageY || 0;
-			}
-
-			// Apply
-			this.settings.mouse_x = x;
-			this.settings.mouse_y = y;
-
-			// Update zoom
-			this.preview_update_zoom_position(true);
-
-			// Show zoom borders and mouse
-			if (this.settings.zoom_border_show) show_zoom_border.call(this, false);
-			show_mouse.call(this, !this.settings.mouse_hide);
-		};
-		var on_preview_image_load = function (event) {
-			if (this.settings.type != TYPE_IMAGE) return;
-
-			// Hide background image
-			var nodes = this.image_data.nodes,
-				set = this.settings,
-				w = nodes.image.naturalWidth,
-				h = nodes.image.naturalHeight;
-
-			style.add_class(nodes.background, "iex_floating_image_background_hidden");
-
-
-			// Update size
-			if (!set.size_acquired || (set.size.width != w || set.size.height != h)) {
-				update_preview_size.call(this, w, h);
-				style.remove_class(nodes.image, "iex_floating_image_image_unsized");
-			}
-		};
-		var on_preview_image_error = function (event) {
-			if (this.settings.type != TYPE_IMAGE) return;
-
-			// Show fallback
-			var nodes = this.image_data.nodes,
-				stats = nodes.stats;
-			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
-			style.add_class(nodes.background, "iex_floating_image_background_fallback");
-			style.add_class(nodes.image, "iex_floating_image_i_hidden");
-			nodes.image.removeAttribute("src");
-
-			// Archive check, eventually
-
-			// Modify status
-			stats.status[0].textContent = "Error";
-			style.add_class(stats.status[0], "iex_floating_image_stats_status_error");
-			style.remove_class(stats.status[0], "iex_floating_image_stats_hidden");
-			style.remove_class(stats.status[1], "iex_floating_image_stats_hidden");
-		};
-		var on_preview_overflow_mouseenter = function (node, data, event) {
-			// Remove padding if enabled
-			if (this.settings.padding_active) {
-				// Remove
-				hide_paddings.call(this);
-			}
-		};
-		var on_preview_stats_mouseenter = function (node, data, event) {
-			// Stop hiding if it's already open
-			this.image_data.state.mouse_in_stats = true;
-			show_zoom_controls.call(this, false);
-		};
-		var on_preview_stats_mouseleave = function (node, data, event) {
-			// Hide controls
-			this.image_data.state.mouse_in_stats = false;
-			hide_zoom_controls.call(this, false, true);
-		};
-		var on_preview_stats_zoom_mouseenter = function (node, data, event) {
-			// Show controls
-			show_zoom_controls.call(this, true);
-		};
-		var on_preview_stats_zoom_controls_mouseenter = function (node, data, event) {
-			// Display controls and make fixed
-			show_zoom_controls.call(this, true);
-			set_zoom_controls_fixed.call(this, true);
-		};
-		var on_preview_stats_zoom_controls_mouseleave = function (node, data, event) {
-			// Make un-fixed and possibly hide
-			set_zoom_controls_fixed.call(this, false);
-			if (!this.image_data.state.mouse_in_stats) {
-				hide_zoom_controls.call(this, true, true);
-			}
-		};
-		var on_preview_stats_zoom_controls_mousedown = function (event) {
-			// Stop
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_preview_stats_zoom_control_click = function (delta, event) {
-			// Modify zoom
-			this.preview_update_zoom(delta, true);
-
-			// Show zoom borders and mouse
-			if (this.settings.zoom_border_show) show_zoom_border.call(this, false);
-			show_mouse.call(this, !this.settings.mouse_hide);
-
-			// Stop
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_window_resize = function (event) {
-			// Reposition
-			this.preview_update(false, false, false);
-
-			// Update bar position
-			if (this.image_data.state.video.mouse_capturing_element !== null) {
-				update_video_mouse_capture.call(this);
-			}
-		};
-		var on_window_scroll = function (event) {
-			// Reposition
-			this.preview_update(false, false, false);
-
-			// Update bar position
-			if (this.image_data.state.video.mouse_capturing_element !== null) {
-				update_video_mouse_capture.call(this);
-			}
-		};
-
-		var on_preview_video_loadedmetadata = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			var set = this.settings,
-				v_set = set.video,
-				nodes = this.image_data.nodes,
-				video = nodes.video,
-				w = video.videoWidth,
-				h = video.videoHeight;
-
-
-			// Update seek bar
-			update_video_duration_status.call(this);
-			update_video_seek_status.call(this, 0);
-
-			// Hide background image and un-hide video
-			style.remove_class(video, "iex_floating_image_video_not_ready");
-			style.add_class(nodes.background, "iex_floating_image_background_hidden");
-
-			// Update size
-			if (!set.size_acquired || (set.size.width != w || set.size.height != h)) {
-				update_preview_size.call(this, w, h);
-				style.remove_class(nodes.video, "iex_floating_image_video_unsized");
-			}
-		};
-		var on_preview_video_canplay = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			var v_set = this.settings.video,
-				nodes = this.image_data.nodes;
-
-			// Auto-play
-			if (v_set.autoplay == 1 && nodes.video.paused && !this.image_data.state.video.interacted) {
-				set_video_paused.call(this, false);
-			}
-		};
-		var on_preview_video_canplaythrough = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			var v_set = this.settings.video,
-				nodes = this.image_data.nodes;
-
-			// Auto-play
-			if (v_set.autoplay == 2 && nodes.video.paused && !this.image_data.state.video.interacted) {
-				set_video_paused.call(this, false);
-			}
-		};
-		var on_preview_video_progress = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			var v_set = this.settings.video,
-				nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				percent = (video.buffered.end(0) / video.duration);
-
-			// Update progress bar
-			v_nodes.load_progress.style.width = (percent * 100).toFixed(2) + "%";
-
-			// Autoplay
-			if (v_set.autoplay == 3 && video.paused && percent >= 1.0 && !this.image_data.state.video.interacted) {
-				set_video_paused.call(this, false);
-			}
-		};
-		var on_preview_video_error = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			// Show fallback
-			var nodes = this.image_data.nodes,
-				stats = nodes.stats;
-			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
-			style.add_class(nodes.background, "iex_floating_image_background_fallback");
-			style.add_class(nodes.video, "iex_floating_image_video_hidden");
-
-			// Archive check, eventually
-
-			// Modify status
-			stats.status[0].textContent = "Error";
-			style.add_class(stats.status[0], "iex_floating_image_stats_status_error");
-			style.remove_class(stats.status[0], "iex_floating_image_stats_hidden");
-			style.remove_class(stats.status[1], "iex_floating_image_stats_hidden");
-		};
-		var on_preview_video_abort = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			// Show fallback
-			var nodes = this.image_data.nodes,
-				stats = nodes.stats;
-			style.remove_class(nodes.background, "iex_floating_image_background_disabled");
-			style.add_class(nodes.background, "iex_floating_image_background_fallback");
-			style.add_class(nodes.video, "iex_floating_image_video_hidden");
-			nodes.video.removeAttribute("src");
-
-			// Archive check, eventually
-
-			// Modify status
-			stats.status[0].textContent = "Abort";
-			style.add_class(stats.status[0], "iex_floating_image_stats_status_error");
-			style.remove_class(stats.status[0], "iex_floating_image_stats_hidden");
-			style.remove_class(stats.status[1], "iex_floating_image_stats_hidden");
-		};
-		var on_preview_video_timeupdate = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			// Update time progress
-			var video = this.image_data.nodes.video;
-			update_video_seek_status.call(this, video.currentTime);
-		};
-		var on_preview_video_ended = function (event) {
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			// Update buttons
-			var video = this.image_data.nodes.video;
-			update_video_play_status.call(this, video.paused);
-		};
-
-		var on_preview_controls_mouseenter = function (node, data, event) {
-			// Do not show for non-video
-			if (this.settings.type != TYPE_VIDEO) return;
-
-			// Show controls
-			var v_nodes = this.image_data.nodes.video_nodes;
-
-			style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
-			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
-		};
-		var on_preview_controls_mouseleave = function (node, data, event) {
-			// Hide controls
-			var v_nodes = this.image_data.nodes.video_nodes;
-
-			style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
-		};
-		var on_preview_controls_container_mousedown = function (event) {
-			var button = 0; // 1=left, 2=middle, 3=right
-            if (event.which) {
-				if (event.which == 1) button = 1;
-				else if (event.which == 2) button = 2;
-				else if (event.which == 3) button = 3;
-            }
-			else {
-				if ((event.button & 1) != 0) button = 1;
-				else if ((event.button & 2) != 0) button = 3;
-				else if ((event.button & 4) != 0) button = 2;
-			}
-
-			// Ignore if not left mb
-			if (button != 1) return;
-
-			// Stop event
-			event.preventDefault();
-			event.stopPropagation();
-			return false;
-		};
-		var on_preview_controls_play_button_click = function (event) {
-			// Play/pause
-			var video = this.image_data.nodes.video;
-
-			set_video_paused.call(this, !video.paused, (event.shiftKey && video.paused) ? (!video.loop) : undefined);
-		};
-		var on_preview_controls_volume_button_click = function (event) {
-			// Mute/unmute
-			set_video_muted.call(this, !this.image_data.nodes.video.muted);
-		};
-		var on_preview_controls_volume_button_mouseenter = function (node, data, event) {
-			// Show volume bar
-			var v_nodes = this.image_data.nodes.video_nodes;
-
-			style.add_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
-		};
-		var on_preview_controls_volume_button_container_mouseleave = function (node, data, event) {
-			// Hide volume bar
-			var v_nodes = this.image_data.nodes.video_nodes;
-
-			style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
-		};
-		var on_preview_controls_seek_bar_mousedown = function (event) {
-			// Get the mouse button
-			var button = 0; // 1=left, 2=middle, 3=right
-            if (event.which) {
-				if (event.which == 1) button = 1;
-				else if (event.which == 2) button = 2;
-				else if (event.which == 3) button = 3;
-            }
-			else {
-				if ((event.button & 1) != 0) button = 1;
-				else if ((event.button & 2) != 0) button = 3;
-				else if ((event.button & 4) != 0) button = 2;
-			}
-			if (button != 1) return;
-
-			// Begin seeking
-			var v_state = this.image_data.state.video,
-				nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes;
-
-			// Set paused state
-			v_state.seeking_paused = video.paused;
-			if (!video.paused) video.pause();
-			v_state.seeking = true;
-
-			// Force visibility
-			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
-
-			// Setup window mousemove and mouseup events
-			setup_video_mouse_capture.call(this);
-
-			// Initial update
-			on_preview_controls_capture_mousemove.call(this, event);
-
-			// Stop
-			event.stopPropagation();
-			event.preventDefault();
-			return false;
-		};
-		var on_preview_controls_volume_bar_mousedown = function (event) {
-			// Get the mouse button
-			var button = 0; // 1=left, 2=middle, 3=right
-            if (event.which) {
-				if (event.which == 1) button = 1;
-				else if (event.which == 2) button = 2;
-				else if (event.which == 3) button = 3;
-            }
-			else {
-				if ((event.button & 1) != 0) button = 1;
-				else if ((event.button & 2) != 0) button = 3;
-				else if ((event.button & 4) != 0) button = 2;
-			}
-			if (button != 1) return;
-
-			// Begin volume changing
-			var v_state = this.image_data.state.video,
-				nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes;
-
-			// Set paused state
-			v_state.volume_modifying = true;
-
-			// Force visibility
-			style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
-			style.add_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
-
-			// Setup window mousemove and mouseup events
-			setup_video_mouse_capture.call(this);
-
-			// Initial update
-			on_preview_controls_capture_mousemove.call(this, event);
-
-			// Stop
-			event.stopPropagation();
-			event.preventDefault();
-			return false;
-		};
-		var on_preview_controls_prevent_default_mousedown = function (event) {
-			event.preventDefault();
-			return false;
-		};
-
-		var on_preview_controls_capture_mousemove = function (event) {
-			// Begin seeking
-			var v_state = this.image_data.state.video,
-				nodes = this.image_data.nodes,
-				v_nodes = nodes.video_nodes,
-				video = nodes.video,
-				x, y;
-
-
-			// Get mouse x/y
-			if (event.pageX == null && (event = event || window.event).clientX != null) {
-				var html = document.documentElement, body = document.body;
-				if (html && body) {
-					x = ((event.clientX || 0) + (html.scrollLeft || (body && body.scrollLeft) || 0)) - (html.clientLeft || 0);
-					y = ((event.clientY || 0) + (html.scrollTop || (body && body.scrollTop) || 0)) - (html.clientTop || 0);
-				}
-			}
-			else {
-				x = event.pageX || 0;
-				y = event.pageY || 0;
-			}
-
-
-			// Set paused state
-			if (v_state.seeking) {
-				var duration = video.duration;
-				if (!isNaN(duration)) {
-					var loaded = video.buffered.end(0) / duration;
-
-					// Get percent
-					var percent = (x - v_state.bar_rect.left) / (v_state.bar_rect.right - v_state.bar_rect.left);
-
-					// Bound
-					if (percent < 0) percent = 0;
-					else if (percent > loaded) percent = loaded;
-
-					// Apply
-					percent *= duration;
-					video.currentTime = percent;
-					update_video_seek_status.call(this, percent);
-				}
-			}
-			else if (v_state.volume_modifying) {
-				// Get percent
-				var percent = 1.0 - (y - v_state.bar_rect.top) / (v_state.bar_rect.bottom - v_state.bar_rect.top);
-
-				// Bound
-				if (percent < 0) percent = 0;
-				else if (percent > loaded) percent = loaded;
-
-				// Set volume
-				set_video_volume.call(this, percent, false, false);
-			}
-		};
-		var on_preview_controls_capture_mouseup = function (event) {
-			var v_state = this.image_data.state.video,
-				nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes;
-
-			if (v_state.seeking) {
-				// Unpause
-				if (!v_state.seeking_paused) video.play();
-
-				// Un-force visibility
-				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
-
-				// Done
-				v_state.seeking = false;
-			}
-			else if (v_state.volume_modifying) {
-				// Save volume
-				set_video_volume.call(this, -1, true, true);
-
-				// Un-force visibility
-				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
-				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
-
-				// Done
-				v_state.volume_modifying = false;
-			}
-
-			// Stop capture
-			teardown_video_mouse_capture.call(this);
-		};
-
-		var on_hotkey = function (event, hotkey) {
-			// Don't run if disabled
-			if (this.disabled) return;
-
-			if (hotkey.key == "esc") {
-				// Close
-				this.preview_close(true);
-				event.preventDefault();
-				event.stopPropagation();
-				return false;
-			}
-		};
-
-		var on_preview_open_timeout = function (image_container, post_info, auto_fit) {
-			// Nullify timer
-			this.preview_open_timer = null;
-			// Close
-			this.preview_open(image_container, post_info, auto_fit);
-		};
-		var on_preview_close_timeout = function () {
-			// Nullify timer
-			this.preview_close_timer = null;
-			// Close
-			this.preview_close(true);
-		};
-
-		var on_asap = function () {
-			// Create floating container
-			this.floating_container = document.createElement("div");
-			this.floating_container.className = "iex_floating_container" + style.theme;
-
-			// Parent
-			var body = document.querySelector("body");
-			if (body) {
-				// Append
-				body.appendChild(this.floating_container);
-			}
-			else {
-				// Invalid
-				this.floating_container = null;
-			}
-		};
-		var on_asap_condition = function () {
-			return document.querySelector("body");
-		};
-
-		var on_settings_value_change = function (data) {
-			// Update
-			this.update_settings_from_global();
 		};
 
 
 
 		var log2 = function (x) {
 			return Math.log(x) / Math.LN2;
-		};
-
-		var format_video_time = function (time) {
-			time = Math.floor(time + 0.5);
-
-			var s = (time % 60).toString();
-			if (s.length < 2) s = "0" + s;
-
-			time = Math.floor(time / 60);
-			return time + ":" + s;
-		};
-
-		var preview_open_test = function (image_container, post_container, obey_timer) {
-			// Get info
-			var info = api.post_get_file_info(post_container);
-			if (!info.image) return;
-
-			// Don't open if expanded
-			if (api.post_is_image_expanded_or_expanding(post_container)) return;
-
-			// Spoiler check
-			var val_check = settings.values["image_expansion"][info.spoiler === null ? "normal" : "spoiler"];
-			if (!val_check["enabled"]) return;
-
-			// Extension check
-			var ext = /\.[^\.]+$/.exec(info.image);
-			ext = ext ? ext[0].toLowerCase() : "";
-			if (this.extensions_valid.indexOf(ext) < 0) return;
-
-			// Open preview
-			var time = val_check["timeout"];
-			if (time == 0 || !obey_timer) {
-				this.preview_open(image_container, info, val_check["to_fit"]);
-			}
-			else {
-				if (this.preview_open_timer !== null) {
-					clearTimeout(this.preview_open_timer);
-				}
-				this.preview_open_timer = setTimeout(on_preview_open_timeout.bind(this, image_container, info, val_check["to_fit"]), time * 1000);
-			}
-		};
-		var preview_reset = function () {
-			var nodes = this.image_data.nodes,
-				stats = nodes.stats,
-				set = this.settings,
-				ani = "",
-				type = set.type;
-
-			// Not visible
-			this.image_visible = false;
-			set.type = TYPE_NONE;
-
-			// Hide
-			style.remove_class(nodes.container, "iex_floating_image_container_visible");
-			style.remove_class(nodes.connector, "iex_floating_image_connector_visible");
-			nodes.background.style.backgroundImage = "";
-
-			// Class resetting
-			nodes.padding.className = "iex_floating_image_padding" + ani + style.theme;
-			nodes.overflow.className = "iex_floating_image_overflow" + style.theme;
-			nodes.background.className = "iex_floating_image_background" + ani + style.theme;
-			nodes.zoom_border.className = "iex_floating_image_zoom_border iex_floating_image_zoom_border_hidden" + ani + style.theme
-
-			// Hide status
-			style.add_class(stats.status[0], "iex_floating_image_stats_hidden");
-			style.add_class(stats.status[1], "iex_floating_image_stats_hidden");
-			style.remove_classes(stats.status[0], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
-			style.remove_classes(stats.status[1], "iex_floating_image_stats_status_archive iex_floating_image_stats_status_error");
-			stats.status[0].textContent = "";
-
-			// Remove media
-			if (type == TYPE_IMAGE) {
-				nodes.image.removeAttribute("src");
-				style.add_class(nodes.image, "iex_floating_image_image_hidden");
-				style.remove_class(nodes.image, "iex_floating_image_image_unsized");
-			}
-			else if (type == TYPE_VIDEO) {
-				var v_nodes = nodes.video_nodes;
-
-				// Hide controls
-				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible");
-				style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_visible_important");
-				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible");
-				style.remove_class(v_nodes.volume_container, "iex_floating_image_overlay_controls_volume_container_visible_important");
-				set_video_mini_controls_enabled.call(this, false);
-
-				nodes.video.removeAttribute("src");
-				style.add_class(nodes.video, "iex_floating_image_video_hidden");
-				style.remove_class(nodes.video, "iex_floating_image_video_unsized");
-				nodes.video.load();
-			}
 		};
 
 		var add_post_container_callbacks = function (post_container) {
@@ -5798,871 +5341,544 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			}
 		};
 
-		var addEventListenerManaged = function (list, node, event, callback, capture) {
-			node.addEventListener(event, callback, capture);
-			list.push([ node , event , callback , capture ]);
-		};
-
-		var create_new_image_preview = function () {
-			// Create the preview container
-			var c, c_pad, c_over, c_offset, c_bg, c_img, c_stats, c_zoom_border1, c_zoom_border2,
-				c_stat_i, c_stat_zoom_controls, c_stat_zoom_inc, c_stat_zoom_dec, c_stat_zoom, c_stat_zoom_fit,
-				c_stat_res, c_stat_status1, c_stat_status2, c_stat_size, c_stat_name, c_connector, w, h, events = [];
-
-			c = document.createElement("div");
-			c.className = "iex_floating_image_container" + style.theme;
-
-			// Position/padding container
-			c_pad = document.createElement("div");
-			c_pad.className = "iex_floating_image_padding" + style.theme;
-			c.appendChild(c_pad);
-
-			// Overflow container
-			c_over = document.createElement("div");
-			c_over.className = "iex_floating_image_overflow" + style.theme;
-			c_pad.appendChild(c_over);
-
-			// Padding container
-			c_offset = document.createElement("div");
-			c_offset.className = "iex_floating_image_offset" + style.theme;
-			c_over.appendChild(c_offset);
-
-			// Background image
-			c_bg = document.createElement("div");
-			c_bg.className = "iex_floating_image_background" + style.theme;
-			c_offset.appendChild(c_bg);
-
-			// Image
-			c_img = document.createElement("img");
-			c_img.className = "iex_floating_image_image iex_floating_image_image_hidden" + style.theme;
-			c_img.setAttribute("alt", "");
-			c_img.setAttribute("title", "");
-			c_offset.appendChild(c_img);
-
-			// Zoom borders
-			w = (this.settings.zoom_margins.horizontal * 100).toFixed(2) + "%";
-			h = (this.settings.zoom_margins.vertical * 100).toFixed(2) + "%";
-			c_zoom_border1 = document.createElement("div");
-			c_zoom_border1.className = "iex_floating_image_zoom_border iex_floating_image_zoom_border_hidden" + style.theme;
-			c_zoom_border1.style.left = w;
-			c_zoom_border1.style.top = h;
-			c_zoom_border1.style.right = w;
-			c_zoom_border1.style.bottom = w;
-			c_over.appendChild(c_zoom_border1);
-
-			c_zoom_border2 = document.createElement("div");
-			c_zoom_border2.className = "iex_floating_image_zoom_border_inner" + style.theme;
-			c_zoom_border1.appendChild(c_zoom_border2);
-
-			// Stats container
-			c_stats = document.createElement("div");
-			c_stats.className = "iex_floating_image_stats_container" + style.theme;
-			c_pad.appendChild(c_stats);
-
-			// Zoom controls
-			c_stat_zoom_controls = document.createElement("span");
-			c_stat_zoom_controls.className = "iex_floating_image_stat iex_floating_image_stats_important iex_floating_image_stats_zoom_controls iex_floating_image_stats_zoom_controls_hidden" + style.theme;
-			c_stats.appendChild(c_stat_zoom_controls);
-
-			c_stat_zoom_inc = document.createElement("span");
-			c_stat_zoom_inc.className = "iex_floating_image_stats_zoom_control iex_floating_image_stats_zoom_control_increase" + style.theme;
-			c_stat_zoom_inc.textContent = "+";
-			c_stat_zoom_controls.appendChild(c_stat_zoom_inc);
-
-			c_stat_zoom_dec = document.createElement("span");
-			c_stat_zoom_dec.className = "iex_floating_image_stats_zoom_control iex_floating_image_stats_zoom_control_decrease" + style.theme;
-			c_stat_zoom_dec.textContent = "\u2212";
-			c_stat_zoom_controls.appendChild(c_stat_zoom_dec);
-
-			// Stats items
-			c_stat_zoom = document.createElement("span");
-			c_stat_zoom.className = "iex_floating_image_stat iex_floating_image_stats_important iex_floating_image_stats_zoom" + style.theme;
-			c_stats.appendChild(c_stat_zoom);
-
-			c_stat_zoom_fit = document.createElement("span");
-			c_stat_zoom_fit.className = "iex_floating_image_stat iex_floating_image_stats_important iex_floating_image_stats_zoom_fit" + style.theme;
-			c_stats.appendChild(c_stat_zoom_fit);
-
-			c_stat_i = document.createElement("span");
-			c_stat_i.className = "iex_floating_image_stat iex_floating_image_stats_sep" + style.theme;
-			c_stat_i.textContent = ", ";
-			c_stats.appendChild(c_stat_i);
-
-			c_stat_status1 = document.createElement("span");
-			c_stat_status1.className = "iex_floating_image_stat iex_floating_image_stats_important iex_floating_image_stats_very_important iex_floating_image_stats_status iex_floating_image_stats_hidden" + style.theme;
-			c_stats.appendChild(c_stat_status1);
-
-			c_stat_status2 = document.createElement("span");
-			c_stat_status2.className = "iex_floating_image_stat iex_floating_image_stats_sep iex_floating_image_stats_hidden" + style.theme;
-			c_stat_status2.textContent = ", ";
-			c_stats.appendChild(c_stat_status2);
-
-			c_stat_res = document.createElement("span");
-			c_stat_res.className = "iex_floating_image_stat iex_floating_image_stats_resolution" + style.theme;
-			c_stats.appendChild(c_stat_res);
-
-			c_stat_i = document.createElement("span");
-			c_stat_i.className = "iex_floating_image_stat iex_floating_image_stats_sep" + style.theme;
-			c_stat_i.textContent = ", ";
-			c_stats.appendChild(c_stat_i);
-
-			c_stat_size = document.createElement("span");
-			c_stat_size.className = "iex_floating_image_stat iex_floating_image_stats_size" + style.theme;
-			c_stats.appendChild(c_stat_size);
-
-			c_stat_i = document.createElement("span");
-			c_stat_i.className = "iex_floating_image_stat iex_floating_image_stats_sep" + style.theme;
-			c_stat_i.textContent = ", ";
-			c_stats.appendChild(c_stat_i);
-
-			c_stat_name = document.createElement("span");
-			c_stat_name.className = "iex_floating_image_stat iex_floating_image_stats_name" + style.theme;
-			c_stats.appendChild(c_stat_name);
-
-
-			// Connector
-			c_connector = document.createElement("div");
-			c_connector.className = "iex_floating_image_connector" + style.theme;
-
-
-			// Events
-			var on_connector_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseenter , null ]),
-				on_connector_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_connector_mouseleave , null ]),
-				on_preview_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseenter , null ]),
-				on_preview_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_mouseleave , null ]),
-				on_preview_mousewheel_bind = on_preview_mousewheel.bind(this),
-				on_preview_mousemove_bind = on_preview_mousemove.bind(this),
-				on_preview_mousedown_bind = on_preview_mousedown.bind(this),
-				on_preview_contextmenu_bind = on_preview_contextmenu.bind(this),
-				on_preview_image_load_bind = on_preview_image_load.bind(this),
-				on_preview_image_error_bind = on_preview_image_error.bind(this),
-				on_preview_overflow_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_overflow_mouseenter , null ]),
-				on_window_resize_bind = on_window_resize.bind(this),
-				on_window_scroll_bind = on_window_scroll.bind(this),
-
-				on_preview_stats_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseenter , null ]),
-				on_preview_stats_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_mouseleave , null ]),
-				on_preview_stats_zoom_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_mouseenter , null ]),
-				on_preview_stats_zoom_controls_mouseenter_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseenter , null ]),
-				on_preview_stats_zoom_controls_mouseleave_bind = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_stats_zoom_controls_mouseleave , null ]),
-				on_preview_stats_zoom_controls_mousedown_bind = on_preview_stats_zoom_controls_mousedown.bind(this),
-				on_preview_stats_zoom_control_click_increase_bind = on_preview_stats_zoom_control_click.bind(this, 1),
-				on_preview_stats_zoom_control_click_decrease_bind = on_preview_stats_zoom_control_click.bind(this, -1);
-
-			addEventListenerManaged(events, c_connector, "mouseover", on_connector_mouseenter_bind, false);
-			addEventListenerManaged(events, c_connector, "mouseout", on_connector_mouseleave_bind, false);
-			addEventListenerManaged(events, c_connector, "mousedown", on_preview_mousedown_bind, false);
-			addEventListenerManaged(events, c, "mouseover", on_preview_mouseenter_bind, false);
-			addEventListenerManaged(events, c, "mouseout", on_preview_mouseleave_bind, false);
-			addEventListenerManaged(events, c, "mousemove", on_preview_mousemove_bind, false);
-			addEventListenerManaged(events, c, "mousewheel", on_preview_mousewheel_bind, false);
-			addEventListenerManaged(events, c, "DOMMouseScroll", on_preview_mousewheel_bind, false);
-			addEventListenerManaged(events, c, "mousedown", on_preview_mousedown_bind, false);
-			addEventListenerManaged(events, c, "contextmenu", on_preview_contextmenu_bind, false);
-			addEventListenerManaged(events, c_img, "load", on_preview_image_load_bind, false);
-			addEventListenerManaged(events, c_img, "error", on_preview_image_error_bind, false);
-			addEventListenerManaged(events, c_over, "mouseover", on_preview_overflow_mouseenter_bind, false);
-
-			addEventListenerManaged(events, c_stats, "mouseover", on_preview_stats_mouseenter_bind, false);
-			addEventListenerManaged(events, c_stats, "mouseout", on_preview_stats_mouseleave_bind, false);
-			addEventListenerManaged(events, c_stat_zoom, "mouseover", on_preview_stats_zoom_mouseenter_bind, false);
-			addEventListenerManaged(events, c_stat_zoom_controls, "mousedown", on_preview_stats_zoom_controls_mousedown_bind, false);
-			addEventListenerManaged(events, c_stat_zoom_controls, "mouseover", on_preview_stats_zoom_controls_mouseenter_bind, false);
-			addEventListenerManaged(events, c_stat_zoom_controls, "mouseout", on_preview_stats_zoom_controls_mouseleave_bind, false);
-			addEventListenerManaged(events, c_stat_zoom_inc, "click", on_preview_stats_zoom_control_click_increase_bind, false);
-			addEventListenerManaged(events, c_stat_zoom_dec, "click", on_preview_stats_zoom_control_click_decrease_bind, false);
-
-			addEventListenerManaged(events, window, "resize", on_window_resize_bind, false);
-			addEventListenerManaged(events, window, "scroll", on_window_scroll_bind, false);
-
-
-			// Append
-			this.floating_container.appendChild(c);
-			this.floating_container.appendChild(c_connector);
-
-
-			// Assign
-			var obj = {
-				nodes: {
-					container: c,
-					padding: c_pad,
-					overflow: c_over,
-					offset: c_offset,
-					background: c_bg,
-					image: c_img,
-					video: null,
-					video_nodes: null,
-					zoom_border: c_zoom_border1,
-					stats: {
-						container: c_stats,
-						zoom: c_stat_zoom,
-						zoom_fit: c_stat_zoom_fit,
-						resolution: c_stat_res,
-						filesize: c_stat_size,
-						filename: c_stat_name,
-						status: [ c_stat_status1 , c_stat_status2 ],
-					},
-					controls: {
-						zoom_container: c_stat_zoom_controls,
-						zoom_decrease: c_stat_zoom_dec,
-						zoom_increase: c_stat_zoom_inc,
-					},
-					connector: c_connector,
-				},
-				events: events,
-				bindings: {
-					on_hide_zoom_border_timeout_bind: hide_zoom_border.bind(this, true),
-					on_hide_mouse_timeout_bind: hide_mouse.bind(this, true),
-					on_hide_zoom_controls_timeout_bind: hide_zoom_controls.bind(this, true, false),
-				},
-				timers: {
-					zoom_border: null,
-					mouse: null,
-					zoom_controls: null
-				},
-				state: {
-					mouse_in_stats: false,
-					video: null
-				},
-			};
-
-			// Return
-			add_video_to_image_preview.call(this, obj);
-			return obj;
-		};
-		var add_video_to_image_preview = function (data) {
-			var nodes = data.nodes,
-				events = data.events,
-				svgns = "http://www.w3.org/2000/svg",
-				c_video, c_overlay, c_padding, c_div1, c_div2, c_div3, c_div4, svg_e1, svg_e2, c_container, c_buttons_left, c_buttons_right,
-				c_seek_container, c_load_progress, c_play_progress, c_volume_progress, c_volume_container, svg_play, svg_volume, c_play_button,
-				c_volume_button, c_seek_bar, c_volume_bar, c_time_current, c_time_duration;
-
-			// Video
-			c_video = document.createElement("video");
-			c_video.className = "iex_floating_image_video iex_floating_image_video_hidden" + style.theme;
-
-
-
-			// Controller overlay
-			c_overlay = document.createElement("div");
-			c_overlay.className = "iex_floating_image_overlay_controls_container" + style.theme;
-
-			c_padding = document.createElement("div");
-			c_padding.className = "iex_floating_image_overlay_controls_inner_container" + style.theme;
-			c_overlay.appendChild(c_padding);
-
-			c_container = document.createElement("div");
-			c_container.className = "iex_floating_image_overlay_controls_table" + style.theme;
-			c_padding.appendChild(c_container);
-
-
-
-			// Pause/play button
-			c_buttons_left = document.createElement("div");
-			c_buttons_left.className = "iex_floating_image_overlay_controls_buttons_container" + style.theme;
-			c_container.appendChild(c_buttons_left);
-
-			c_div1 = document.createElement("div");
-			c_div1.className = "iex_floating_image_overlay_controls_buttons_container2" + style.theme;
-			c_buttons_left.appendChild(c_div1);
-
-			c_div2 = document.createElement("div");
-			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_left" + style.theme;
-			c_div1.appendChild(c_div2);
-
-			// Mouse event controller
-			c_play_button = document.createElement("div");
-			c_play_button.className = "iex_floating_image_overlay_button_mouse_controller" + style.theme;
-			c_div2.appendChild(c_play_button);
-
-			// SVG image
-			svg_play = document.createElementNS(svgns, "svg");
-			svg_play.setAttribute("class", "iex_floating_image_overlay_play_button");
-			svg_play.setAttribute("svgns", svgns);
-			svg_play.setAttribute("width", "2em");
-			svg_play.setAttribute("height", "2em");
-			svg_play.setAttribute("viewBox", "0 0 1 1");
-			c_div2.appendChild(svg_play);
-
-			svg_e1 = document.createElementNS(svgns, "g");
-			svg_e1.setAttribute("class", "iex_floating_image_overlay_button_scale_group");
-			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
-			svg_play.appendChild(svg_e1);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_play_icon iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0,0 0,1 1,0.5");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_loop_icon iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0.1,0.05 1,0.5 0.1,0.95");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_loop_icon iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0,0.7 0.4,0.5 0,0.3");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_pause_icon iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0.125,0 0.375,0 0.375,1 0.125,1");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_play_button_pause_icon iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0.625,0 0.875,0 0.875,1 0.625,1");
-			svg_e1.appendChild(svg_e2);
-
-
-
-			// Seek bar
-			c_div1 = document.createElement("div");
-			c_div1.className = "iex_floating_image_overlay_controls_seek_container" + style.theme;
-			c_container.appendChild(c_div1);
-
-			c_div2 = document.createElement("div");
-			c_div2.className = "iex_floating_image_overlay_controls_seek_container2" + style.theme;
-			c_div1.appendChild(c_div2);
-
-			c_seek_bar = document.createElement("div");
-			c_seek_bar.className = "iex_floating_image_overlay_controls_seek_bar" + style.theme;
-			c_div2.appendChild(c_seek_bar);
-
-			c_div3 = document.createElement("div");
-			c_div3.className = "iex_floating_image_overlay_controls_seek_bar_bg" + style.theme;
-			c_seek_bar.appendChild(c_div3);
-
-			c_load_progress = document.createElement("div");
-			c_load_progress.className = "iex_floating_image_overlay_controls_seek_bar_loaded" + style.theme;
-			c_div3.appendChild(c_load_progress);
-
-			c_play_progress = document.createElement("div");
-			c_play_progress.className = "iex_floating_image_overlay_controls_seek_bar_played" + style.theme;
-			c_div3.appendChild(c_play_progress);
-
-			c_div4 = document.createElement("div");
-			c_div4.className = "iex_floating_image_overlay_controls_seek_time_table" + style.theme;
-			c_div3.appendChild(c_div4);
-
-			c_time_current = document.createElement("div");
-			c_time_current.className = "iex_floating_image_overlay_controls_seek_time_current" + style.theme;
-			c_div4.appendChild(c_time_current);
-
-			c_time_duration = document.createElement("div");
-			c_time_duration.className = "iex_floating_image_overlay_controls_seek_time_duration" + style.theme;
-			c_div4.appendChild(c_time_duration);
-
-
-
-			// Volume bar/mute button
-			c_buttons_right = document.createElement("div");
-			c_buttons_right.className = "iex_floating_image_overlay_controls_buttons_container" + style.theme;
-			c_container.appendChild(c_buttons_right);
-
-			c_div1 = document.createElement("div");
-			c_div1.className = "iex_floating_image_overlay_controls_buttons_container2" + style.theme;
-			c_buttons_right.appendChild(c_div1);
-
-			c_div2 = document.createElement("div");
-			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_right" + style.theme;
-			c_div1.appendChild(c_div2);
-
-			// Mouse event controller
-			c_volume_button = document.createElement("div");
-			c_volume_button.className = "iex_floating_image_overlay_button_mouse_controller" + style.theme;
-			c_div2.appendChild(c_volume_button);
-
-			// SVG image
-			svg_volume = document.createElementNS(svgns, "svg");
-			svg_volume.setAttribute("class", "iex_floating_image_overlay_volume_button");
-			svg_volume.setAttribute("svgns", svgns);
-			svg_volume.setAttribute("width", "2em");
-			svg_volume.setAttribute("height", "2em");
-			svg_volume.setAttribute("viewBox", "0 0 1 1");
-			c_div2.appendChild(svg_volume);
-
-			svg_e1 = document.createElementNS(svgns, "g");
-			svg_e1.setAttribute("class", "iex_floating_image_overlay_button_scale_group");
-			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
-			svg_volume.appendChild(svg_e1);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_speaker iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("points", "0,0.3 0.2,0.3 0.5,0 0.6,0 0.6,1 0.5,1 0.2,0.7 0,0.7");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "path");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_wave_big iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("d", "M 0.75,0.1 Q 1.3,0.5 0.75,0.9 L 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "path");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_wave_small iex_floating_image_overlay_button_fill");
-			svg_e2.setAttribute("d", "M 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "g");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon");
-			svg_e1.appendChild(svg_e2);
-			svg_e1 = svg_e2;
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon_polygon");
-			svg_e2.setAttribute("points", "0.7,0.3 1.0,0.6 0.9,0.7 0.6,0.4");
-			svg_e1.appendChild(svg_e2);
-
-			svg_e2 = document.createElementNS(svgns, "polygon");
-			svg_e2.setAttribute("class", "iex_floating_image_overlay_volume_button_mute_icon_polygon");
-			svg_e2.setAttribute("points", "0.7,0.7 1.0,0.4 0.9,0.3 0.6,0.6");
-			svg_e1.appendChild(svg_e2);
-
-
-
-			// Volume bar
-			c_div2 = document.createElement("div");
-			c_div2.className = "iex_floating_image_overlay_controls_buttons_container_right_upper" + style.theme;
-			c_div1.appendChild(c_div2);
-
-			c_volume_container = document.createElement("div");
-			c_volume_container.className = "iex_floating_image_overlay_controls_volume_container" + style.theme;
-			c_div2.appendChild(c_volume_container);
-
-			c_volume_bar = document.createElement("div");
-			c_volume_bar.className = "iex_floating_image_overlay_controls_volume_bar" + style.theme;
-			c_volume_container.appendChild(c_volume_bar);
-
-			c_div3 = document.createElement("div");
-			c_div3.className = "iex_floating_image_overlay_controls_volume_bar_bg" + style.theme;
-			c_volume_bar.appendChild(c_div3);
-
-			c_volume_progress = document.createElement("div");
-			c_volume_progress.className = "iex_floating_image_overlay_controls_volume_bar_level" + style.theme;
-			c_div3.appendChild(c_volume_progress);
-
-
-
-			// Events
-			addEventListenerManaged(events, c_video, "loadedmetadata", on_preview_video_loadedmetadata.bind(this), false);
-			addEventListenerManaged(events, c_video, "canplay", on_preview_video_canplay.bind(this), false);
-			addEventListenerManaged(events, c_video, "canplaythrough", on_preview_video_canplaythrough.bind(this), false);
-			addEventListenerManaged(events, c_video, "error", on_preview_video_error.bind(this), false);
-			addEventListenerManaged(events, c_video, "abort", on_preview_video_abort.bind(this), false);
-			addEventListenerManaged(events, c_video, "progress", on_preview_video_progress.bind(this), false);
-			addEventListenerManaged(events, c_video, "timeupdate", on_preview_video_timeupdate.bind(this), false);
-			addEventListenerManaged(events, c_video, "ended", on_preview_video_ended.bind(this), false);
-
-			var prevent = on_preview_controls_prevent_default_mousedown.bind(this);
-
-			addEventListenerManaged(events, c_padding, "mouseover", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_mouseenter , null ]), false);
-			addEventListenerManaged(events, c_padding, "mouseout", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_mouseleave , null ]), false);
-			addEventListenerManaged(events, c_container, "mousedown", on_preview_controls_container_mousedown.bind(this), false);
-			addEventListenerManaged(events, c_play_button, "click", on_preview_controls_play_button_click.bind(this), false);
-			addEventListenerManaged(events, c_volume_button, "click", on_preview_controls_volume_button_click.bind(this), false);
-			addEventListenerManaged(events, c_volume_button, "mouseover", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_volume_button_mouseenter , null ]), false);
-			addEventListenerManaged(events, c_buttons_right, "mouseout", wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_preview_controls_volume_button_container_mouseleave , null ]), false);
-			addEventListenerManaged(events, c_seek_bar, "mousedown", on_preview_controls_seek_bar_mousedown.bind(this), false);
-			addEventListenerManaged(events, c_volume_bar, "mousedown", on_preview_controls_volume_bar_mousedown.bind(this), false);
-			addEventListenerManaged(events, c_time_current, "mousedown", prevent, false);
-			addEventListenerManaged(events, c_time_duration, "mousedown", prevent, false);
-
-
-
-			// Apply data
-			data.nodes.video = c_video;
-			data.nodes.video_nodes = {
-				overlay: c_overlay,
-				padding: c_padding,
-				container: c_container,
-
-				play_button: c_play_button,
-				volume_button: c_volume_button,
-				volume_button_container: c_buttons_right,
-				volume_container: c_volume_container,
-
-				seek_bar: c_seek_bar,
-				volume_bar: c_volume_bar,
-
-				time_current: c_time_current,
-				time_duration: c_time_duration,
-
-				play_progress: c_play_progress,
-				load_progress: c_load_progress,
-				volume_progress: c_volume_progress,
-
-				svg_volume: svg_volume,
-				svg_play: svg_play,
-			};
-			data.state.video = {
-				seeking: false,
-				seeking_paused: false,
-				volume_modifying: false,
-				on_capture_mousemove: on_preview_controls_capture_mousemove.bind(this),
-				on_capture_mouseup: on_preview_controls_capture_mouseup.bind(this),
-				mouse_capturing_element: null,
-				interacted: false,
-				bar_rect: null
-			};
-
-
-			// Insert
-			nodes.overflow.appendChild(c_overlay);
-			nodes.offset.appendChild(c_video);
-		};
-
-		var show_zoom_border = function (persistent) {
-			var i_d = this.image_data,
-				i_d_t = i_d.timers;
-
-			// Remove the class
-			style.remove_class(i_d.nodes.zoom_border, "iex_floating_image_zoom_border_hidden");
-
-			// Timer
-			if (persistent) {
-				if (i_d_t.zoom_border !== null) {
-					clearTimeout(i_d_t.zoom_border);
-					i_d_t.zoom_border = null;
-				}
+		var preview_open_test = function (image_container, post_container, obey_timer) {
+			// Don't open if same
+			if (this.current_image_container === image_container) {
+				this.preview_close_cancel();
+				return;
+			}
+
+			// Get info
+			if (post_container === null) post_container = api.post_get_post_container_from_image_container(image_container);
+			var post_info = api.post_get_file_info(post_container);
+			if (!post_info.image) return;
+
+			// Don't open if expanded
+			if (api.post_is_image_expanded_or_expanding(post_container)) return;
+
+			// Spoiler check
+			var val_check = settings.values["image_expansion"][post_info.spoiler === null ? "normal" : "spoiler"];
+			if (!val_check["enabled"]) return;
+
+			// Extension check
+			var ext = /\.[^\.]+$/.exec(post_info.image);
+			ext = ext ? ext[0].toLowerCase() : "";
+			if (!(ext in this.extensions_valid)) return;
+
+			// Open preview
+			var time = val_check["timeout"];
+			if (time == 0 || !obey_timer) {
+				this.preview_open(image_container, post_info, val_check["to_fit"]);
 			}
 			else {
-				if (i_d_t.zoom_border !== null) {
-					clearTimeout(i_d_t.zoom_border);
+				if (this.preview_open_timer !== null) {
+					clearTimeout(this.preview_open_timer);
 				}
-				i_d_t.zoom_border = setTimeout(i_d.bindings.on_hide_zoom_border_timeout_bind, this.settings.zoom_border_hide_time);
+				this.preview_open_timer = setTimeout(on_preview_open_timeout.bind(this, image_container, post_info, val_check["to_fit"]), time * 1000);
 			}
 		};
-		var hide_zoom_border = function (nullify_timer) {
-			var i_d = this.image_data,
-				i_d_t = i_d.timers;
 
-			// Timer
-			if (!nullify_timer && i_d_t.zoom_border !== null) {
-				clearTimeout(i_d_t.zoom_border);
-			}
-			i_d_t.zoom_border = null;
+		var preview_create = function () {
+			var zoom_margins = this.settings.zoom_margins;
 
-			// Add the class
-			style.add_class(i_d.nodes.zoom_border, "iex_floating_image_zoom_border_hidden");
+			// Create new
+			this.mpreview = new MediaPreview();
+
+			// Setup size
+			this.mpreview.set_view_borders(zoom_margins.horizontal, zoom_margins.vertical);
+
+			// Hook events
+			this.mpreview.on("image_load", this.on_preview_image_load_bind);
+			this.mpreview.on("image_error", this.on_preview_image_error_bind);
+
+			this.mpreview.on("video_ready", this.on_preview_video_ready_bind);
+			this.mpreview.on("video_can_play", this.on_preview_video_can_play_bind);
+			this.mpreview.on("video_can_play_through", this.on_preview_video_can_play_through_bind);
+			this.mpreview.on("video_load", this.on_preview_video_load_bind);
+			this.mpreview.on("video_error", this.on_preview_video_error_bind);
+			this.mpreview.on("video_volume_change", this.on_preview_video_volume_change_bind);
+
+			this.mpreview.on("size_change", this.on_preview_size_change_bind);
+
+			this.mpreview.on("mouse_wheel", this.on_preview_mouse_wheel_bind);
+			this.mpreview.on("mouse_enter", this.on_preview_mouse_enter_bind);
+			this.mpreview.on("mouse_leave", this.on_preview_mouse_leave_bind);
+			this.mpreview.on("mouse_down", this.on_preview_mouse_down_bind);
+			this.mpreview.on("mouse_move", this.on_preview_mouse_move_bind);
+			this.mpreview.on("mouse_enter_main", this.on_preview_mouse_enter_main_bind);
+
+			this.mpreview.on("stats_zoom_control_click", this.on_preview_stats_zoom_control_click_bind);
+
+			window.addEventListener("resize", this.on_window_resize_bind, false);
+			window.addEventListener("scroll", this.on_window_scroll_bind, false);
+
+			// Add
+			this.mpreview.add_to(this.floating_container);
 		};
-		var show_mouse = function (persistent) {
-			var i_d = this.image_data,
-				i_d_t = i_d.timers;
+		var preview_detach = function (destroy) {
+			if (this.mpreview === null) return;
 
-			// Remove the class
-			style.remove_class(i_d.nodes.overflow, "iex_floating_image_overflow_no_cursor");
+			// Unhook events
+			this.mpreview.off("image_load", this.off_preview_image_load_bind);
+			this.mpreview.off("image_error", this.off_preview_image_error_bind);
 
-			// Timer
-			if (persistent) {
-				if (i_d_t.mouse !== null) {
-					clearTimeout(i_d_t.mouse);
-					i_d_t.mouse = null;
-				}
-			}
-			else {
-				if (i_d_t.mouse !== null) {
-					clearTimeout(i_d_t.mouse);
-				}
-				i_d_t.mouse = setTimeout(i_d.bindings.on_hide_mouse_timeout_bind, this.settings.mouse_hide_time);
-			}
+			this.mpreview.off("video_ready", this.off_preview_video_ready_bind);
+			this.mpreview.off("video_can_play", this.off_preview_video_can_play_bind);
+			this.mpreview.off("video_can_play_through", this.off_preview_video_can_play_through_bind);
+			this.mpreview.off("video_load", this.off_preview_video_load_bind);
+			this.mpreview.off("video_error", this.off_preview_video_error_bind);
+			this.mpreview.off("video_volume_change", this.off_preview_video_volume_change_bind);
+
+			this.mpreview.off("size_change", this.off_preview_size_change_bind);
+
+			this.mpreview.off("mouse_wheel", this.off_preview_mouse_wheel_bind);
+			this.mpreview.off("mouse_enter", this.off_preview_mouse_enter_bind);
+			this.mpreview.off("mouse_leave", this.off_preview_mouse_leave_bind);
+			this.mpreview.off("mouse_down", this.off_preview_mouse_down_bind);
+			this.mpreview.off("mouse_move", this.off_preview_mouse_move_bind);
+			this.mpreview.off("mouse_enter_main", this.off_preview_mouse_enter_main_bind);
+
+			this.mpreview.off("stats_zoom_control_click", this.off_preview_stats_zoom_control_click_bind);
+
+			window.removeEventListener("resize", this.on_window_resize_bind, false);
+			window.removeEventListener("scroll", this.on_window_scroll_bind, false);
+
+			// Nullify
+			if (destroy) this.mpreview.destroy();
+			this.mpreview = null;
 		};
-		var hide_mouse = function (nullify_timer) {
-			var i_d = this.image_data,
-				i_d_t = i_d.timers;
 
-			// Timer
-			if (!nullify_timer && i_d_t.mouse !== null) {
-				clearTimeout(i_d_t.mouse);
-			}
-			i_d_t.mouse = null;
-
-			// Add the class
-			style.add_class(i_d.nodes.overflow, "iex_floating_image_overflow_no_cursor");
-		};
-		var hide_paddings = function () {
-			// Remove
-			var c_pad = this.image_data.nodes.padding;
-
-			c_pad.style.top = "0";
-			c_pad.style.padding = "0";
-
-			this.settings.padding_active = false;
-		};
-		var update_zoom_stat = function () {
-			// Update zoom display
+		var change_zoom_level = function (delta) {
+			// Update zoom
 			var set = this.settings,
-				stats = this.image_data.nodes.stats,
-				s;
+				size_update = false,
+				zoom_limits = set.zoom_limits,
+				img_size = this.mpreview.size,
+				disp_size = this.mpreview.get_window(),
+				disp_size_max = this.display_window_max,
+				zoom = this.mpreview.zoom,
+				fit = this.mpreview.fit,
+				fit_large = this.mpreview.fit_large,
+				fit_large_allowed = set.fit_large_allowed,
+				z;
 
-			// Level
-			s = (set.zoom * 100).toFixed(0) + "%";
-			stats.zoom.textContent = s;
+			if (delta > 0) {
+				// Larger
+				if (fit) {
+					if (fit_large || !fit_large_allowed) {
+						// Zoom in
+						z = zoom * zoom_limits.increase;
+						if (z > zoom_limits.max) z = zoom_limits.max;
+						if (zoom != z) {
+							// Update
+							zoom = z;
+							size_update = true;
+						}
+					}
+					else {
+						// Zoom in
+						var w_scale = disp_size_max.width / img_size.width,
+							h_scale = disp_size_max.height / img_size.height,
+							z_scale = (w_scale < h_scale) ? w_scale : h_scale;
 
-			// Fit status
-			s = "";
-			if (set.fit) {
-				s = " fit";
-				if (set.fit_large_allowed) {
-					s += "-" + (set.fit_axis == 0 ? "x" : "y");
+						z = zoom * zoom_limits.increase;
+
+						w_scale = disp_size_max.width / (img_size.width * z * z_scale);
+						h_scale = disp_size_max.height / (img_size.height * z * z_scale);
+
+						if (w_scale <= 1.0 && h_scale <= 1.0) {
+							// Fit large
+							fit_large = true;
+							zoom = 1.0;
+						}
+						else {
+							// Not fit large
+							zoom = z;
+						}
+
+						// Update
+						size_update = true;
+					}
+				}
+				else {
+					// Zoom in
+					z = zoom * zoom_limits.increase;
+					var w_scale = disp_size_max.width / (img_size.width * z),
+						h_scale = disp_size_max.height / (img_size.height * z);
+
+					if (w_scale <= 1.0 || h_scale <= 1.0) {
+						// Fit
+						fit = true;
+						fit_large = (Math.abs(w_scale - h_scale) < 1e-5) && fit_large_allowed;
+						zoom = 1.0;
+					}
+					else {
+						// Not fit
+						zoom = z;
+					}
+
+					// Update
+					size_update = true;
 				}
 			}
-			stats.zoom_fit.textContent = s;
-		};
-		var show_zoom_controls = function (force_open) {
-			var i_data = this.image_data;
+			else if (delta < 0) {
+				// Smaller
+				if (fit) {
+					if (zoom == 1.0) {
+						if (fit_large) {
+							// Switch to normal fit
+							var w_scale = disp_size_max.width / img_size.width,
+								h_scale = disp_size_max.height / img_size.height,
+								z_scale = (w_scale < h_scale) ? w_scale : h_scale,
+								scale;
 
-			// Display
-			if (force_open) {
-				var zoom_container = i_data.nodes.controls.zoom_container,
-					z_rect;
-				style.remove_class(zoom_container, "iex_floating_image_stats_zoom_controls_hidden");
+							w_scale = disp_size_max.width / (img_size.width * z_scale);
+							h_scale = disp_size_max.height / (img_size.height * z_scale);
+							scale = (w_scale > h_scale) ? w_scale : h_scale;
+							scale = Math.pow(2, Math.floor(log2(scale)));
 
-				var z_rect = this.get_object_rect(zoom_container);
-				i_data.nodes.stats.zoom.style.paddingLeft = (z_rect.right - z_rect.left) + "px";
-			}
+							fit_large = false;
+							zoom = scale;
+							size_update = true;
+						}
+						else {
+							// Stop fitting if possible
+							var w_scale = disp_size_max.width / img_size.width,
+								h_scale = disp_size_max.height / img_size.height,
+								scale;
 
-			// Stop timer
-			if (i_data.timers.zoom_controls !== null) {
-				clearTimeout(i_data.timers.zoom_controls);
-				i_data.timers.zoom_controls = null;
-			}
-		};
-		var hide_zoom_controls = function (instant, timer_check) {
-			var i_data = this.image_data;
-			if (instant) {
-				// Hide
-				var zoom_container = i_data.nodes.controls.zoom_container;
-				style.add_class(zoom_container, "iex_floating_image_stats_zoom_controls_hidden");
-				i_data.nodes.stats.zoom.style.paddingLeft = "";
+							if (w_scale > 1.0 && h_scale > 1.0) {
+								// Calculate new zoom
+								scale = (w_scale < h_scale) ? w_scale : h_scale;
+								scale = Math.pow(2, Math.floor(log2(scale)));
 
-				// Stop timer
-				if (timer_check && i_data.timers.zoom_controls !== null) {
-					clearTimeout(i_data.timers.zoom_controls);
+								// Update
+								fit = false;
+								fit_large = false;
+								zoom = scale;
+								size_update = true;
+							}
+						}
+					}
+					else {
+						// Zoom out
+						zoom /= zoom_limits.decrease;
+						if (zoom < 1.0) zoom = 1.0;
+
+						// Update
+						size_update = true;
+					}
 				}
-				i_data.timers.zoom_controls = null;
+				else {
+					// Zoom out
+					z = zoom / zoom_limits.decrease;
+					if (z < zoom_limits.min) z = zoom_limits.min;
+
+					if (zoom != z) {
+						// Update
+						zoom = z;
+						size_update = true;
+					}
+				}
 			}
-			else {
-				// Set timer
-				i_data.timers.zoom_controls = setTimeout(i_data.bindings.on_hide_zoom_controls_timeout_bind, 10);
+
+			// Update
+			if (size_update) {
+				// Update
+				this.mpreview.set_zoom(zoom, fit, fit_large);
+				this.preview_update(true, false, false);
+				update_zoom_offset.call(this);
 			}
 		};
-		var set_zoom_controls_fixed = function (fixed) {
-			// Set fixed
-			var i_data = this.image_data,
-				zoom_container = i_data.nodes.controls.zoom_container;
-
-			if (fixed) {
-				var w_rect = this.get_document_rect(),
-					z_rect = this.get_object_rect(zoom_container);
-
-				// Fix
-				style.add_class(zoom_container, "iex_floating_image_stats_zoom_controls_fixed");
-				zoom_container.style.left = (z_rect.left - w_rect.left) + "px";
-				zoom_container.style.top = (z_rect.top - w_rect.top) + "px";
+		var change_zoom_borders_visibility = function (visible) {
+			this.mpreview.set_view_borders_visible(visible);
+			if (visible) {
+				if (this.zoom_borders_hide_timer !== null) clearTimeout(this.zoom_borders_hide_timer);
+				this.zoom_borders_hide_timer = setTimeout(this.on_preview_zoom_borders_hide_timeout_bind, this.settings.zoom_borders_hide_time);
 			}
-			else {
-				// Un-fix
-				style.remove_class(zoom_container, "iex_floating_image_stats_zoom_controls_fixed");
-				zoom_container.style.left = "";
-				zoom_container.style.top = "";
+		};
+		var change_mouse_visibility = function (visible) {
+			this.mpreview.set_mouse_visible(visible);
+			if (visible && this.settings.mouse_hide) {
+				if (this.mouse_hide_timer !== null) clearTimeout(this.mouse_hide_timer);
+				this.mouse_hide_timer = setTimeout(this.on_preview_mouse_hide_timeout_bind, this.settings.mouse_hide_time);
 			}
-
 		};
 
-		var set_video_initial = function () {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				v_set = this.settings.video;
+		var update_zoom_offset = function (x, y) {
+			// Change zoom offset
+			var rect = this.mpreview.get_inner_rect(),
+				r_w = (rect.right - rect.left),
+				r_h = (rect.bottom - rect.top),
+				zoom_margins = this.settings.zoom_margins,
+				x = (this.mouse_x - (rect.left + zoom_margins.horizontal * r_w)) / (r_w * (1.0 - 2.0 * zoom_margins.horizontal)),
+				y = (this.mouse_y - (rect.top + zoom_margins.vertical * r_h)) / (r_h * (1.0 - 2.0 * zoom_margins.vertical));
 
-			// Initial video setup
-			set_video_muted.call(this, v_set.mute_initially);
-			set_video_volume.call(this, v_set.volume, false, false);
-			video.loop = v_set.loop;
-			v_nodes.load_progress.style.width = "0";
-			this.image_data.state.video.interacted = false;
-			if (v_set.mini_controls >= 2) {
-				set_video_mini_controls_enabled.call(this, true);
+			if (x < 0) x = 0;
+			else if (x > 1) x = 1;
+			if (y < 0) y = 0;
+			else if (y > 1) y = 1;
+
+			if (this.settings.zoom_invert) {
+				x = 1.0 - x;
+				y = 1.0 - y;
 			}
 
-			// Update seek bar
-			update_video_seek_status.call(this, -1);
-			update_video_duration_status.call(this);
-
-			// Update icons
-			update_video_play_status.call(this, true);
+			this.mpreview.set_offset(x, y);
 		};
-		var set_video_muted = function (muted) {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				v_state = this.image_data.state.video;
 
-			// Apply
-			video.muted = muted;
 
-			// Change icon
-			if (muted) style.add_class_svg(v_nodes.svg_volume, "iex_floating_image_overlay_volume_button_muted");
-			else style.remove_class_svg(v_nodes.svg_volume, "iex_floating_image_overlay_volume_button_muted");
+		var on_asap = function () {
+			var body = document.querySelector("body"),
+				theme = style.theme;
 
-			// Interacted
-			v_state.interacted = true;
+			// Parent
+			if (body) {
+				// Create floating container
+				this.floating_container = document.createElement("div");
+				this.floating_container.className = "iex_floating_container" + theme;
+
+				// Create connector
+				this.connector = document.createElement("div");
+				this.connector.className = "iex_floating_image_connector" + theme;
+				this.connector.addEventListener("mouseover", this.on_image_connector_mouseenter_bind, false);
+				this.connector.addEventListener("mouseout", this.on_image_connector_mouseleave_bind, false);
+				this.connector.addEventListener("mousedown", this.on_image_connector_mousedown_bind, false);
+				this.floating_container.appendChild(this.connector);
+
+				// Append
+				body.appendChild(this.floating_container);
+			}
 		};
-		var set_video_volume = function (volume, apply_changes, save_changes) {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				v_state = this.image_data.state.video,
-				cls;
+		var on_asap_condition = function () {
+			return document.querySelector("body");
+		};
 
-			// Set volume on video
-			if (volume >= 0) {
-				if (volume > 1) volume = 1;
-				video.volume = volume;
+		var on_post_queue_callback = function (post_container) {
+			// Add hooks
+			add_post_container_callbacks.call(this, post_container);
+		};
+
+		var on_preview_image_load = function (event) {
+			// Hide fallback
+			this.mpreview.set_background_style(0);
+		};
+		var on_preview_image_error = function (event) {
+			// Display fallback
+			this.mpreview.set_background_style(2);
+
+			// Show error
+			this.mpreview.set_stat_status(true, event.reason, "error");
+		};
+
+		var on_preview_video_ready = function (event) {
+			// Hide fallback
+			this.mpreview.set_background_style(0);
+		};
+		var on_preview_video_can_play = function (event) {
+			// Auto-play
+			if (this.settings.video.autoplay == 1 && !this.mpreview.video_interacted()) {
+				this.mpreview.set_video_paused(false);
 			}
-			else {
-				volume = video.volume;
+		};
+		var on_preview_video_can_play_through = function (event) {
+			// Auto-play
+			if (this.settings.video.autoplay == 2 && !this.mpreview.video_interacted()) {
+				this.mpreview.set_video_paused(false);
 			}
-
-			// Update bar
-			v_nodes.volume_progress.style.height = (volume * 100).toFixed(2) + "%";
-
-			// Update icons
-			cls = "iex_floating_image_overlay_volume_button" + (video.muted ? " iex_floating_image_overlay_volume_button_muted" : "");
-			if (volume > 0.625) cls += " iex_floating_image_overlay_volume_button_high";
-			else if (volume > 0.125) cls += " iex_floating_image_overlay_volume_button_medium";
-			else cls += " iex_floating_image_overlay_volume_button_low";
-			v_nodes.svg_volume.setAttribute("class", cls);
-
-			// Interacted
-			v_state.interacted = true;
-
-			// Save
-			if (apply_changes) {
-				this.settings.video.volume = volume;
+		};
+		var on_preview_video_load = function (event) {
+			// Auto-play
+			if (this.settings.video.autoplay == 3 && !this.mpreview.video_interacted()) {
+				this.mpreview.set_video_paused(false);
 			}
-			if (save_changes) {
-				// Save
-				settings.change_value(["image_expansion", "video", "volume"], volume);
+		};
+		var on_preview_video_error = function (event) {
+			// Display fallback
+			this.mpreview.set_background_style(2);
+
+			// Show error
+			this.mpreview.set_stat_status(true, event.reason, "error");
+		};
+		var on_preview_video_volume_change = function (event) {
+			// Save volume changes
+			if (event.reason == "seek") {
+				settings.change_value(["image_expansion", "video", "volume"], event.volume);
 				settings.save_values();
 			}
 		};
-		var set_video_paused = function (paused, loop) {
-			var video = this.image_data.nodes.video;
 
-			// Loop
-			if (loop === true || loop === false) {
-				video.loop = loop;
+		var on_preview_size_change = function (event) {
+			// Update size
+			this.mpreview.set_size(event.width, event.height, true);
+			this.mpreview.set_stat_resolution(undefined, event.width + "x" + event.height);
+
+			// Reposition
+			this.preview_update(false, false, false);
+		};
+
+		var on_preview_mouse_wheel = function (event) {
+			// Zoom in/out
+			change_zoom_level.call(this, event.delta);
+			if (this.settings.zoom_borders_show) change_zoom_borders_visibility.call(this, true);
+			change_mouse_visibility.call(this, true)
+		};
+		var on_preview_mouse_enter = function (event) {
+			// Cancel close
+			this.preview_close_cancel();
+			change_mouse_visibility.call(this, true);
+
+			// Mini controls
+			var mc = this.settings.video.mini_controls;
+			if (mc < 3) this.mpreview.set_vcontrols_mini_visible(mc == 1);
+		};
+		var on_preview_mouse_leave = function (event) {
+			// Delay close
+			this.preview_close(false);
+
+			// Mini controls
+			var mc = this.settings.video.mini_controls;
+			if (mc < 3) this.mpreview.set_vcontrols_mini_visible(mc == 2);
+		};
+		var on_preview_mouse_down = function (event) {
+			// Close
+			this.preview_close(true);
+		};
+		var on_preview_mouse_move = function (event) {
+			// Change zoom offset
+			this.mouse_x = event.x;
+			this.mouse_y = event.y;
+			update_zoom_offset.call(this);
+			if (this.settings.zoom_borders_show) change_zoom_borders_visibility.call(this, true);
+			change_mouse_visibility.call(this, true)
+		};
+		var on_preview_mouse_enter_main = function (event) {
+			// Hide paddings
+			if (this.paddings_active) {
+				this.paddings_active = false;
+				this.mpreview.clear_paddings();
 			}
-
-			// Pause or play
-			if (paused) video.pause();
-			else video.play();
-
-			// Interacted
-			this.image_data.state.video.interacted = true;
-
-			// Update buttons
-			update_video_play_status.call(this, paused);
 		};
-		var update_video_play_status = function (paused) {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes;
 
-			// Update buttons
-			v_nodes.svg_play.setAttribute("class", "iex_floating_image_overlay_play_button" + (video.loop ? " iex_floating_image_overlay_play_button_looping" : "") + (paused ? "" : " iex_floating_image_overlay_play_button_playing"));
+		var on_preview_stats_zoom_control_click = function (event) {
+			// Zoom in/out
+			change_zoom_level.call(this, event.delta);
 		};
-		var update_video_duration_status = function () {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				duration = video.duration;
 
-			// Update seek bar
-			if (isNaN(duration)) {
-				// Update time numbers
-				v_nodes.time_duration.textContent = "";
+		var on_preview_open_timeout = function (image_container, post_info, auto_fit) {
+			// Nullify timer
+			this.preview_open_timer = null;
+			// Close
+			this.preview_open(image_container, post_info, auto_fit);
+		};
+		var on_preview_close_timeout = function () {
+			// Nullify timer
+			this.preview_close_timer = null;
+			// Close
+			this.preview_close(true);
+		};
+		var on_preview_zoom_borders_hide_timeout = function () {
+			this.zoom_borders_hide_timer = null;
+			change_zoom_borders_visibility.call(this, false);
+		};
+		var on_preview_mouse_hide_timeout = function () {
+			this.mouse_hide_timer = null;
+			change_mouse_visibility.call(this, false);
+		};
+
+		var on_image_mouseenter = function (image_container, data, event) {
+			// Don't run if disabled
+			if (this.disabled) return;
+
+			// Attempt to open
+			preview_open_test.call(this, image_container, null, true);
+		};
+		var on_image_mouseleave = function (image_container, data, event) {
+			// Don't run if disabled
+			if (this.disabled) return;
+
+			// Close preview
+			this.preview_close(false);
+		};
+		var on_image_click = function (self, data, event) {
+			// Don't run if disabled
+			if (self.disabled) return;
+
+			// Close preview
+			setTimeout(on_image_click_delay.bind(self, this), 10);
+		};
+		var on_image_click_delay = function (image_container) {
+			var post_container = api.post_get_post_container_from_image_container(image_container);
+			if (post_container === null) return;
+
+			if (api.post_is_image_expanded_or_expanding(post_container)) {
+				// Close
+				this.preview_close(true);
 			}
 			else {
-				// Update time numbers
-				v_nodes.time_duration.textContent = format_video_time.call(this, duration);
+				// Attempt to open
+				preview_open_test.call(this, image_container, post_container, false);
 			}
 		};
-		var update_video_seek_status = function (time) {
-			var nodes = this.image_data.nodes,
-				video = nodes.video,
-				v_nodes = nodes.video_nodes,
-				duration = video.duration;
 
-			// Update seek bar
-			if (time < 0 || isNaN(duration)) {
-				// Bar
-				v_nodes.play_progress.style.width = "0";
-
-				// Update time numbers
-				v_nodes.time_current.textContent = "";
-			}
-			else {
-				// Bar
-				v_nodes.play_progress.style.width = ((time / duration) * 100).toFixed(2) + "%";
-
-				// Update time numbers
-				v_nodes.time_current.textContent = format_video_time.call(this, time);
-			}
+		var on_image_connector_mouseenter = function (image_container, data, event) {
+			// Cancel close
+			this.preview_close_cancel();
 		};
-		var setup_video_mouse_capture = function () {
-			var v_state = this.image_data.state.video;
-
-			if (v_state.mouse_capturing_element === null && (v_state.mouse_capturing_element = document.documentElement) !== null) {
-				v_state.mouse_capturing_element.addEventListener("mousemove", v_state.on_capture_mousemove, false);
-				v_state.mouse_capturing_element.addEventListener("mouseup", v_state.on_capture_mouseup, false);
-				update_video_mouse_capture.call(this);
-			}
+		var on_image_connector_mouseleave = function (image_container, data, event) {
+			// Close preview
+			this.preview_close(false);
 		};
-		var teardown_video_mouse_capture = function () {
-			var v_state = this.image_data.state.video;
-
-			if (v_state.mouse_capturing_element !== null) {
-				v_state.mouse_capturing_element.removeEventListener("mousemove", v_state.on_capture_mousemove, false);
-				v_state.mouse_capturing_element.removeEventListener("mouseup", v_state.on_capture_mouseup, false);
-				v_state.mouse_capturing_element = null;
-			}
-		};
-		var update_video_mouse_capture = function () {
-			var v_nodes = this.image_data.nodes.video_nodes,
-				v_state = this.image_data.state.video;
-
-			// Set paused state
-			if (v_state.seeking) {
-				v_state.bar_rect = this.get_object_rect(v_nodes.seek_bar);
-			}
-			else if (v_state.volume_modifying) {
-				v_state.bar_rect = this.get_object_rect(v_nodes.volume_bar);
-			}
-		};
-		var set_video_mini_controls_enabled = function (enabled) {
-			// Show or hide the mini controller
-			var v_nodes = this.image_data.nodes.video_nodes;
-
-			if (enabled) style.add_class(v_nodes.container, "iex_floating_image_overlay_controls_table_mini");
-			else style.remove_class(v_nodes.container, "iex_floating_image_overlay_controls_table_mini");
+		var on_image_connector_mousedown = function (event) {
+			// Close
+			this.preview_close(true);
 		};
 
-		var update_preview_size = function (width_new, height_new) {
-			var set = this.settings,
-				stats = this.image_data.nodes.stats;
+		var on_window_resize = function (event) {
+			// Reposition
+			this.preview_update(false, false, false);
+		};
+		var on_window_scroll = function (event) {
+			// Reposition
+			this.preview_update(false, false, false);
+		};
 
-			// Change
-			set.size.width = width_new;
-			set.size.height = height_new;
-			set.size_acquired = true;
+		var on_api_post_add = function (container) {
+			// Queue add hooks
+			this.post_queue.push(container);
+		};
+		var on_api_post_remove = function (container) {
+			// Remove hooks
+			remove_post_container_callbacks.call(this, container);
+		};
+		var on_api_image_hover_open = function () {
+			// Disable
+			if (this.disabled) return;
+			this.disable();
 
-			// Change info
-			stats.resolution.textContent = set.size.width + "x" + set.size.height;
+			// Remove event
+			api.off("image_hover_open", this.on_api_image_hover_open_bind);
 
-			// Reset size
-			this.preview_update(true, false, false);
+			// Update settings
+			settings.disable_image_expansion();
+		};
+
+		var on_settings_value_change = function (data) {
+			// Update
+			this.update_settings_from_global();
+		};
+
+		var on_hotkey = function (event, hotkey) {
+			// Don't run if disabled
+			if (this.disabled) return;
+
+			if (hotkey.key == "esc") {
+				// Close
+				this.preview_close(true);
+				event.preventDefault();
+				event.stopPropagation();
+				return false;
+			}
 		};
 
 
@@ -6671,17 +5887,57 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			constructor: ImageHover,
 
 			destroy: function () {
-				// Remove events
-				if (this.on_api_image_hover_open_bind !== null) {
-					api.off("image_hover_open", this.on_api_image_hover_open_bind);
-					this.on_api_image_hover_open_bind = null;
+				var par;
+
+				// Detach preview
+				preview_detach.call(this, true);
+
+				// Create connector
+				par = this.connector.parentNode;
+				if (par) {
+					this.connector.removeEventListener("mouseover", this.on_image_connector_mouseenter_bind, false);
+					this.connector.removeEventListener("mouseout", this.on_image_connector_mouseleave_bind, false);
+					this.connector.removeEventListener("mousedown", this.on_image_connector_mousedown_bind, false);
+
+					par.removeChild(this.connector);
 				}
+
+				// Remove floating container
+				par = this.floating_container.parentNode;
+				if (par) {
+					par.removeChild(this.floating_container);
+				}
+
+				// Remove hotkeys
 				if (this.hotkeys !== null) {
 					for (var i = 0; i < this.hotkeys.length; ++i) {
 						hotkey_manager.unregister(this.hotkeys[i]);
 					}
 					this.hotkeys = null;
 				}
+
+				// Remove api events
+				api.off("post_add", this.on_api_post_add_bind);
+				api.off("post_remove", this.on_api_post_remove_bind);
+				api.off("image_hover_open", this.on_api_image_hover_open_bind);
+
+				// Remove settings events
+				settings.off_change(["image_expansion", "hover", "zoom_invert"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "zoom_borders_show"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "zoom_borders_hide_time"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "zoom_buttons"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "mouse_hide"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "mouse_hide_time"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "header_overlap"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "fit_large_allowed"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "hover", "display_stats"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "video", "autoplay"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "video", "loop"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "video", "mute_initially"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "video", "volume"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "video", "mini_controls"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "style", "controls_rounded_border"], this.off_settings_value_change_bind);
+				settings.off_change(["image_expansion", "style", "animations_background"], this.off_settings_value_change_bind);
 			},
 
 			start: function () {
@@ -6700,11 +5956,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				this.post_queue = Delay.queue(api.get("posts"), on_post_queue_callback.bind(this), 50, 0.25);
 
 				// Bind post acquiring
-				api.on("post_add", on_api_post_add.bind(this));
-				api.on("post_remove", on_api_post_remove.bind(this));
+				api.on("post_add", this.on_api_post_add_bind);
+				api.on("post_remove", this.on_api_post_remove_bind);
 
 				// Bind default image hover test
-				api.on("image_hover_open", this.on_api_image_hover_open_bind = on_api_image_hover_open.bind(this));
+				api.on("image_hover_open", this.on_api_image_hover_open_bind);
 
 				// Hotkeys
 				var on_hotkey_bind = on_hotkey.bind(this);
@@ -6723,190 +5979,80 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				this.preview_close(true);
 			},
 
-			update_settings_from_global: function () {
-				// Copy settings
-				var hs = settings.values["image_expansion"]["hover"],
-					vs = settings.values["image_expansion"]["video"],
-					ss = settings.values["image_expansion"]["style"],
-					set = this.settings,
-					v_set = set.video,
-					s_set = set.style;
-
-				set.zoom_invert = hs.zoom_invert;
-				set.zoom_border_show = hs.zoom_border_show;
-				set.zoom_border_hide_time = hs.zoom_border_hide_time * 1000;
-				set.mouse_hide = hs.mouse_hide;
-				set.mouse_hide_time = hs.mouse_hide_time * 1000;
-				set.header_overlap = hs.header_overlap;
-				set.fit_large_allowed = hs.fit_large_allowed;
-				set.display_stats = hs.display_stats;
-
-				v_set.autoplay = vs.autoplay;
-				v_set.loop = vs.loop;
-				v_set.mute_initially = vs.mute_initially;
-				v_set.volume = vs.volume;
-				v_set.mini_controls = vs.mini_controls;
-
-				s_set.controls_rounded_border = ss.controls_rounded_border;
-
-				if (this.image_data !== null) this.update_style();
-			},
-
 			preview_open: function (image_container, post_info, auto_fit) {
-				// Can't open
-				if (this.floating_container === null) return;
+				var display_stats = this.settings.display_stats,
+					v_set = this.settings.video,
+					mc = this.settings.video.mini_controls,
+					ext, ext_info, ext_bg_show;
 
-				// Cancel the open timer
+				// Clear timer
 				if (this.preview_open_timer !== null) {
 					clearTimeout(this.preview_open_timer);
 					this.preview_open_timer = null;
 				}
-
-				// Cancel the close timer
 				if (this.preview_close_timer !== null) {
 					clearTimeout(this.preview_close_timer);
 					this.preview_close_timer = null;
 				}
 
-				// Already opened
-				if (this.image_visible && image_container === this.settings.image_container) return;
+				// Set
+				this.current_image_container = image_container;
 
-
-
-				// Create
-				if (this.image_data === null) {
-					// Create new
-					this.image_data = create_new_image_preview.call(this);
-					this.update_style();
+				// Create new
+				if (this.mpreview === null) {
+					preview_create.call(this);
+					this.update_mpreview();
 				}
-
-
-
-				// Vars
-				var nodes = this.image_data.nodes,
-					stats = nodes.stats,
-					set = this.settings,
-					ext = /\.[^\.]+$/.exec(post_info.filename);
-
-
 
 				// Expansion type
+				ext = /\.[^\.]+$/.exec(post_info.image);
 				ext = ext ? ext[0].toLowerCase() : "";
-				set.type = (this.extensions_video.indexOf(ext) >= 0) ? TYPE_VIDEO : TYPE_IMAGE;
+				ext_info = this.extensions_valid[ext];
+				ext_bg_show = settings.values.image_expansion.extensions[ext_info.ext].background;
 
+				if (ext_info.type == "video") {
+					// Set video
+					this.mpreview.set_video(post_info.image);
 
+					// Playback settings
+					this.mpreview.set_video_muted(v_set.mute_initially);
+					this.mpreview.set_video_volume(v_set.volume);
+					this.mpreview.set_video_paused(true, v_set.loop);
+					this.mpreview.clear_video_interactions();
+				}
+				else {
+					this.mpreview.set_image(post_info.image);
+				}
 
-				// Reset
-				if (this.image_visible) preview_reset.call(this);
+				// Background
+				this.mpreview.set_background(post_info.thumb, ext_bg_show);
 
-
-
-				// Apply settings
-				set.image_container = image_container;
-				set.fit = auto_fit;
-				set.fit_large = false;
-				set.fit_axis = 0;
-				set.zoom = 1.0;
-				set.zoom_x = 0.0;
-				set.zoom_y = 0.0;
-				set.mouse_x = 0.0;
-				set.mouse_y = 0.0;
+				// Size
 				if (post_info.resolution.width > 0 && post_info.resolution.height > 0) {
-					// Size info okay
-					set.size.width = post_info.resolution.width;
-					set.size.height = post_info.resolution.height;
-					set.size_acquired = true;
+					this.mpreview.set_size(post_info.resolution.width, post_info.resolution.height, true);
+					this.mpreview.set_stat_resolution((display_stats == 0), post_info.resolution.width + "x" + post_info.resolution.height);
 				}
 				else {
-					// No size found
-					if (post_info.resolution_thumb.width > 0 && post_info.resolution_thumb.height > 0) {
-						set.size.width = post_info.resolution_thumb.width;
-						set.size.height = post_info.resolution_thumb.height;
-					}
-					else {
-						set.size.width = 100;
-						set.size.height = 100;
-					}
-					set.size_acquired = false;
+					this.mpreview.set_size(post_info.resolution_thumb.width, post_info.resolution_thumb.height, false);
+					this.mpreview.set_stat_resolution((display_stats == 0), "unknown");
 				}
 
-
-
-				// Positioning
-				this.image_visible = true;
-				this.preview_update(true, false, false);
-
-
-
-				// Stats display level
-				if (set.display_stats == 0) {
-					style.remove_classes(stats.container, "iex_floating_image_stats_container_minimal iex_floating_image_stats_container_very_minimal");
+				// Stats
+				if (post_info.filename) {
+					this.mpreview.set_stat_file_name((display_stats == 0), post_info.filename);
 				}
-				else if (set.display_stats == 1) {
-					style.remove_class(stats.container, "iex_floating_image_stats_container_very_minimal");
-					style.add_class(stats.container, "iex_floating_image_stats_container_minimal");
-				}
-				else if (set.display_stats == 2) {
-					style.remove_class(stats.container, "iex_floating_image_stats_container_minimal");
-					style.add_class(stats.container, "iex_floating_image_stats_container_very_minimal");
-				}
+				this.mpreview.set_stat_file_size((display_stats == 0), post_info.size + post_info.size_label);
 
-				// Set stats
-				if (set.size_acquired) {
-					stats.resolution.textContent = set.size.width + "x" + set.size.height;
-				}
-				else {
-					stats.resolution.textContent = "unknown";
-				}
-				stats.filesize.textContent = post_info.size + post_info.size_label;
-				stats.filename.textContent = post_info.filename;
-				update_zoom_stat.call(this);
+				// Mini controls
+				this.mpreview.set_vcontrols_mini_visible(mc == 3 || mc == 2);
 
+				// Set visible
+				this.mpreview.set_visible(true);
+				style.add_class(this.connector, "iex_floating_image_connector_visible");
 
-
-				// Background image
-				if (post_info.thumb !== null) {
-					nodes.background.style.backgroundImage = "url('" + post_info.thumb + "')";
-					if (!this.extensions_display_bg[ext]) {
-						// Hide it
-						style.add_class(nodes.background, "iex_floating_image_background_disabled");
-					}
-				}
-				else {
-					// Hide
-					style.add_class(nodes.background, "iex_floating_image_background_disabled");
-				}
-
-				// Image or video setup
-				if (set.type == TYPE_IMAGE) {
-					// Image
-					style.remove_class(nodes.image, "iex_floating_image_image_hidden");
-
-					if (!set.size_acquired) style.add_class(nodes.image, "iex_floating_image_image_unsized");
-
-					nodes.image.removeAttribute("src");
-					nodes.image.setAttribute("src", post_info.image);
-				}
-				else { // if (set.type == TYPE_VIDEO) {
-					// Reset controls
-					var video = nodes.video;
-					set_video_initial.call(this);
-
-					// Video
-					style.remove_class(video, "iex_floating_image_video_hidden");
-					style.add_class(video, "iex_floating_image_video_not_ready");
-
-					if (!set.size_acquired) style.add_class(nodes.video, "iex_floating_image_video_unsized");
-
-					video.setAttribute("src", post_info.image);
-					video.load();
-				}
-
-
-
-				// Visible
-				style.add_class(nodes.container, "iex_floating_image_container_visible");
-				style.add_class(nodes.connector, "iex_floating_image_connector_visible");
+				// Update position
+				this.mpreview.set_fixed(true);
+				this.preview_update(false, true, auto_fit);
 			},
 			preview_close: function (immediate) {
 				// Cancel the open timer
@@ -6915,23 +6061,23 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					this.preview_open_timer = null;
 				}
 
-				// Already closed
-				if (!this.image_visible) return;
+				if (this.mpreview === null || !this.mpreview.is_visible()) return;
 
-				// Timer
 				if (immediate) {
-					if (this.preview_close_timer !== null) {
-						clearTimeout(this.preview_close_timer);
-						this.preview_close_timer = null;
-					}
+					// Immediate
+					this.mpreview.set_visible(false);
+					this.current_image_container = null;
+
+					// Connector
+					style.remove_class(this.connector, "iex_floating_image_connector_visible");
 				}
 				else {
+					// Delay
+					if (this.preview_close_timer !== null) {
+						clearTimeout(this.preview_close_timer);
+					}
 					this.preview_close_timer = setTimeout(this.on_preview_close_timeout_bind, 20);
-					return;
 				}
-
-				// Remove visibility
-				preview_reset.call(this);
 			},
 			preview_close_cancel: function () {
 				// Cancel the timer
@@ -6940,31 +6086,32 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					this.preview_close_timer = null;
 				}
 			},
-			preview_update: function (fit_best, keep_mouse_inside, update_zoom_pos) {
+
+			preview_update: function (keep_mouse_inside, fit_reset, fit_start) {
 				// Update the position and sizing of the preview after a zoom, resize, or open event
-				if (!this.image_visible) return;
+				if (this.mpreview === null || !this.mpreview.is_visible()) return;
 
 				// Vars
 				var set = this.settings,
+					header_overlap = set.header_overlap,
 					paddings = set.region_paddings,
-					max_rect = this.get_document_rect(),
+					max_rect = style.get_document_rect(),
+					img = this.current_image_container.querySelector("img") || this.current_image_container,
+					img_rect = style.get_object_rect_inner(img),
 					left = max_rect.left,
 					top = max_rect.top,
-					img_rect = this.get_object_rect(set.image_container),
-					size = set.size,
-					w = size.width,
-					h = size.height,
-					nodes = this.image_data.nodes,
-					c = nodes.container,
-					c_pad = nodes.padding,
-					c_over = nodes.overflow,
-					c_offset = nodes.offset,
-					c_connector = nodes.connector;
-
+					fit = this.mpreview.fit,
+					fit_large = this.mpreview.fit_large,
+					fit_large_allowed = set.fit_large_allowed,
+					fit_axis = 0,
+					w = this.mpreview.size.width,
+					h = this.mpreview.size.height,
+					zoom = this.mpreview.zoom,
+					x, y, w_max, h_max, w_scale, h_scale;
 
 				// Include header
-				if (!set.header_overlap) {
-					var header_rect = this.get_header_rect();
+				if (!header_overlap) {
+					var header_rect = api.get_header_rect();
 
 					// Subtract
 					if (header_rect.top <= max_rect.top && header_rect.bottom > max_rect.top) {
@@ -6984,90 +6131,78 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				max_rect.right -= paddings.right;
 				max_rect.bottom -= paddings.bottom;
 
-				// Sizing
-				var w_max = (max_rect.right - max_rect.left);
-				var h_max = (max_rect.bottom - max_rect.top);
+				// Maximum size
+				w_max = (max_rect.right - max_rect.left);
+				h_max = (max_rect.bottom - max_rect.top);
 				if (w_max < 1) w_max = 1;
 				if (h_max < 1) h_max = 1;
-
-				set.display_size_max.width = w_max;
-				set.display_size_max.height = h_max;
+				this.display_window_max.width = w_max;
+				this.display_window_max.height = h_max;
 
 				// Get the minimum scale and apply it
-				var w_scale = w_max / w,
-					h_scale = h_max / h;
+				w_scale = w_max / w,
+				h_scale = h_max / h;
 
-				if (fit_best && (w_scale < 1.0 || h_scale < 1.0)) {
-					set.fit = true;
-					set.fit_large = (Math.abs(w_scale - h_scale) < 1e-5) && set.fit_large_allowed;
+				if (fit_reset) {
+					zoom = 1;
+					fit = fit_start;
+					fit_large = false;
+					if (w_scale < 1.0 || h_scale < 1.0) {
+						fit = true;
+						fit_large = (Math.abs(w_scale - h_scale) < 1e-5) && fit_large_allowed;
+					}
 				}
-				if (set.fit) {
+				if (fit) {
 					var best_scale;
-					if ((w_scale > h_scale) == set.fit_large) {
+					if ((w_scale > h_scale) == fit_large) {
 						best_scale = w_scale;
-						set.fit_axis = 0; // x
+						fit_axis = 0;
 					}
 					else {
 						best_scale = h_scale;
-						set.fit_axis = 1; // y
+						fit_axis = 1;
 					}
 
 					w *= best_scale;
 					h *= best_scale;
 				}
-				w *= set.zoom;
-				h *= set.zoom;
+				w *= zoom;
+				h *= zoom;
 
-				set.display_size.width = w;
-				set.display_size.height = h;
-
-				// Connector
-				c_connector.style.left = img_rect.right + "px";
-				c_connector.style.width = paddings.left + "px";
-				c_connector.style.top = img_rect.top + "px";
-				c_connector.style.height = (img_rect.bottom - img_rect.top) + "px";
+				// Limit
+				this.mpreview.set_view_borders_visible_sides((w - w_max) > 1e-5, (h - h_max) > 1e-5);
+				if (w > w_max) w = w_max;
+				if (h > h_max) h = h_max;
 
 				// Position
-				var disp_h = ((h < h_max) ? h : h_max),
-					x = max_rect.left,
-					y = (img_rect.top + img_rect.bottom - disp_h) / 2.0;
-				if (y + disp_h >= max_rect.bottom) y = max_rect.bottom - disp_h;
+				x = max_rect.left,
+				y = (img_rect.top + img_rect.bottom - h) / 2.0;
+				if (y + h >= max_rect.bottom) y = max_rect.bottom - h;
 				if (y < max_rect.top) y = max_rect.top;
 
-				c.style.left = (x - left).toFixed(2) + "px";
-				c.style.top = (y - top).toFixed(2) + "px";
-
-				// Size
-				c_over.style.maxWidth = w_max.toFixed(2) + "px";
-				c_over.style.maxHeight = h_max.toFixed(2) + "px";
-				c_offset.style.width = w + "px";
-				c_offset.style.height = h + "px";
-
 				// Mouse inside
-				var off_right = 0,
-					off_top = 0,
-					off_bottom = 0,
-					off_any = false;
 				if (keep_mouse_inside) {
 					// Setup
-					var m_extra = set.padding_extra,
-						disp_w = ((w < w_max) ? w : w_max),
-						x_r = x + disp_w,
-						y_b = y + disp_h;
-					off_right = (set.mouse_x - x_r);
-					off_top = (y - set.mouse_y);
-					off_bottom = (set.mouse_y - y_b);
+					var off_right = 0,
+						off_top = 0,
+						off_bottom = 0,
+						padding_extra = set.padding_extra,
+						x_r = x + w,
+						y_b = y + h;
+
+					off_right = (this.mouse_x - x_r);
+					off_top = (y - this.mouse_y);
+					off_bottom = (this.mouse_y - y_b);
 
 					// Right offset
 					if (off_right <= 0) {
 						off_right = 0;
 					}
 					else {
-						off_right += m_extra.right;
+						off_right += padding_extra.right;
 						if (x_r + off_right > max_rect.right) {
 							off_right = Math.max(0, max_rect.right - x_r);
 						}
-						off_any = (off_right > 0);
 					}
 
 					// Top offset
@@ -7075,11 +6210,10 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 						off_top = 0;
 					}
 					else {
-						off_top += m_extra.top;
+						off_top += padding_extra.top;
 						if (y - off_top < max_rect.top) {
 							off_top = Math.max(0, y - max_rect.top);
 						}
-						off_any = off_any || (off_top > 0);
 					}
 
 					// Bottom offset
@@ -7087,326 +6221,81 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 						off_bottom = 0;
 					}
 					else {
-						off_bottom += m_extra.bottom;
+						off_bottom += padding_extra.bottom;
 						if (y_b + off_bottom > max_rect.bottom) {
 							off_bottom = Math.max(0, max_rect.bottom - y_b);
 						}
-						off_any = off_any || (off_bottom > 0);
 					}
-				}
 
-				// Apply mouse
-				c_pad.style.top = (-off_top).toFixed(2) + "px";
-				c_pad.style.padding = off_top.toFixed(2) + "px " + off_right.toFixed(2) + "px " + off_bottom.toFixed(2) + "px 0px";
-				set.padding_active = off_any;
-
-				// Mouse position
-				this.preview_update_zoom_position(update_zoom_pos);
-			},
-			preview_update_zoom: function (delta, position_update) {
-				// Update zoom
-				var set = this.settings,
-					img_size = set.size,
-					disp_size = set.display_size,
-					disp_size_max = set.display_size_max,
-					size_update = false,
-					zoom_limits = set.zoom_limits;
-
-				if (delta > 0) {
-					// Larger
-					if (set.fit) {
-						if (set.fit_large || !set.fit_large_allowed) {
-							// Zoom in
-							var z = set.zoom;
-							z *= zoom_limits.increase;
-							if (z > zoom_limits.max) z = zoom_limits.max;
-							if (set.zoom != z) {
-								// Update
-								set.zoom = z;
-								size_update = true;
-							}
-						}
-						else {
-							// Zoom in
-							var z = set.zoom * zoom_limits.increase,
-								w_scale = disp_size_max.width / img_size.width,
-								h_scale = disp_size_max.height / img_size.height,
-								z_scale = (w_scale < h_scale) ? w_scale : h_scale;
-
-							w_scale = disp_size_max.width / (img_size.width * z * z_scale);
-							h_scale = disp_size_max.height / (img_size.height * z * z_scale);
-
-							if (w_scale <= 1.0 && h_scale <= 1.0) {
-								// Fit large
-								set.fit_large = true;
-								set.zoom = 1.0;
-							}
-							else {
-								// Not fit large
-								set.zoom = z;
-							}
-
-							// Update
-							size_update = true;
-						}
+					// Set
+					if (off_top > 0 || off_right > 0 || off_bottom > 0) {
+						this.paddings_active = true;
+						this.mpreview.set_paddings(off_top, off_right, off_bottom, 0);
 					}
 					else {
-						// Zoom in
-						var z = set.zoom;
-						z *= zoom_limits.increase;
-
-						var w_scale = disp_size_max.width / (img_size.width * z);
-						var h_scale = disp_size_max.height / (img_size.height * z);
-						if (w_scale <= 1.0 || h_scale <= 1.0) {
-							// Fit
-							set.fit = true;
-							set.fit_large = (Math.abs(w_scale - h_scale) < 1e-5) && set.fit_large_allowed;
-							set.zoom = 1.0;
-						}
-						else {
-							// Not fit
-							set.zoom = z;
-						}
-
-						// Update
-						size_update = true;
-					}
-				}
-				else if (delta < 0) {
-					// Smaller
-					if (set.fit) {
-						if (set.zoom == 1.0) {
-							if (set.fit_large) {
-								// Switch to normal fit
-								var w_scale = disp_size_max.width / img_size.width,
-									h_scale = disp_size_max.height / img_size.height,
-									z_scale = (w_scale < h_scale) ? w_scale : h_scale,
-									scale;
-
-								w_scale = disp_size_max.width / (img_size.width * z_scale);
-								h_scale = disp_size_max.height / (img_size.height * z_scale);
-								scale = (w_scale > h_scale) ? w_scale : h_scale;
-								scale = Math.pow(2, Math.floor(log2(scale)));
-
-								set.fit_large = false;
-								set.zoom = scale;
-								size_update = true;
-							}
-							else {
-								// Stop fitting if possible
-								var w_scale = disp_size_max.width / img_size.width,
-									h_scale = disp_size_max.height / img_size.height,
-									scale;
-
-								if (w_scale > 1.0 && h_scale > 1.0) {
-									// Calculate new zoom
-									scale = (w_scale < h_scale) ? w_scale : h_scale;
-									scale = Math.pow(2, Math.floor(log2(scale)));
-
-									// Update
-									set.fit = false;
-									set.fit_large = false;
-									set.zoom = scale;
-									size_update = true;
-								}
-							}
-						}
-						else {
-							// Zoom out
-							set.zoom /= zoom_limits.decrease;
-							if (set.zoom < 1.0) set.zoom = 1.0;
-
-							// Update
-							size_update = true;
-						}
-					}
-					else {
-						// Zoom out
-						var z = set.zoom;
-						z /= zoom_limits.decrease;
-						if (z < 1.0) z = 1.0;
-
-						if (set.zoom != z) {
-							// Update
-							set.zoom = z;
-							size_update = true;
-						}
-					}
-				}
-
-				// Update
-				if (size_update) {
-					// Update
-					this.preview_update(false, true, position_update);
-
-					// Update text
-					update_zoom_stat.call(this);
-				}
-			},
-			preview_update_zoom_position: function (update) {
-				var set = this.settings,
-					disp_size = set.display_size,
-					disp_size_max = set.display_size_max,
-					preview_rect = null,
-					margins = set.zoom_margins,
-					w_diff = disp_size.width - disp_size_max.width,
-					h_diff = disp_size.height - disp_size_max.height,
-					nodes = this.image_data.nodes,
-					c_zoom_border = nodes.zoom_border,
-					c_offset = nodes.offset,
-					x, y;
-
-				if (update) {
-					if (w_diff > 1e-5) {
-						// Update x
-						preview_rect = this.get_object_rect(this.image_data.nodes.overflow);
-
-						// Get local mouse
-						x = set.mouse_x - preview_rect.left;
-						var w = (preview_rect.right - preview_rect.left);
-						var m_w = margins.horizontal * w;
-						x = (x - m_w) / (w - m_w * 2);
-						if (x < 0.0) x = 0.0;
-						else if (x > 1.0) x = 1.0;
-
-						// Apply
-						set.zoom_x = x;
-						style.add_class(c_zoom_border, "iex_floating_image_zoom_border_horizontal");
-					}
-					else {
-						// Zero
-						set.zoom_x = 0.0;
-						x = 0.0;
-						w_diff = 0.0;
-						style.remove_class(c_zoom_border, "iex_floating_image_zoom_border_horizontal");
-					}
-
-					if (h_diff > 1e-5) {
-						// Update y
-						if (preview_rect === null) preview_rect = this.get_object_rect(this.image_data.nodes.overflow);
-
-						// Get local mouse
-						y = set.mouse_y - preview_rect.top;
-						var h = (preview_rect.bottom - preview_rect.top);
-						var m_v = margins.vertical * h;
-						y = (y - m_v) / (h - m_v * 2);
-						if (y < 0.0) y = 0.0;
-						else if (y > 1.0) y = 1.0;
-
-						// Apply
-						set.zoom_y = y;
-						style.add_class(c_zoom_border, "iex_floating_image_zoom_border_vertical");
-					}
-					else {
-						// Zero
-						set.zoom_y = 0.0;
-						y = 0.0;
-						h_diff = 0.0;
-						style.remove_class(c_zoom_border, "iex_floating_image_zoom_border_vertical");
+						this.paddings_active = false;
+						this.mpreview.clear_paddings();
 					}
 				}
 				else {
-					// Get vars
-					x = set.zoom_x;
-					y = set.zoom_y;
-					if (w_diff < 0.0) w_diff = 0.0;
-					if (h_diff < 0.0) h_diff = 0.0;
+					// No paddings
+					this.paddings_active = false;
+					this.mpreview.clear_paddings();
 				}
 
-				// Invert
-				if (set.zoom_invert) {
-					x = 1.0 - x;
-					y = 1.0 - y;
-				}
+				// Set
+				this.mpreview.set_window(x - left, y - top, w, h);
+				this.mpreview.set_zoom(zoom, fit, fit_large, fit_axis);
 
-				// Set offset
-				c_offset.style.left = (w_diff * -x).toFixed(2) + "px";
-				c_offset.style.top = (h_diff * -y).toFixed(2) + "px";
+				// Connector
+				this.connector.style.left = (img_rect.right).toFixed(2) + "px";
+				this.connector.style.top = (img_rect.top).toFixed(2) + "px";
+				this.connector.style.width = (paddings.left).toFixed(2) + "px";
+				this.connector.style.height = (img_rect.bottom - img_rect.top).toFixed(2) + "px";
+console.log((paddings.left)+","+(img_rect.bottom - img_rect.top));
+				// Stats
+				this.mpreview.set_stat_zoom((set.display_stats <= 1), (zoom * 100) + "%", fit ? " fit-" + (this.mpreview.fit_axis == 0 ? "x" : "y") : "");
 			},
 
-			update_style: function () {
-				var nodes = this.image_data.nodes,
-					v_nodes = nodes.video_nodes,
+			update_settings_from_global: function () {
+				// Copy settings
+				var hs = settings.values["image_expansion"]["hover"],
+					vs = settings.values["image_expansion"]["video"],
+					ss = settings.values["image_expansion"]["style"],
 					set = this.settings,
-					b_class = "iex_floating_image_overlay_controls_no_border_radius";
+					v_set = set.video,
+					s_set = set.style;
 
+				set.zoom_invert = hs.zoom_invert;
+				set.zoom_borders_show = hs.zoom_borders_show;
+				set.zoom_borders_hide_time = hs.zoom_borders_hide_time * 1000;
+				set.zoom_buttons = hs.zoom_buttons;
+				set.mouse_hide = hs.mouse_hide;
+				set.mouse_hide_time = hs.mouse_hide_time * 1000;
+				set.header_overlap = hs.header_overlap;
+				set.fit_large_allowed = hs.fit_large_allowed;
+				set.display_stats = hs.display_stats;
+
+				v_set.autoplay = vs.autoplay;
+				v_set.loop = vs.loop;
+				v_set.mute_initially = vs.mute_initially;
+				v_set.volume = vs.volume;
+				v_set.mini_controls = vs.mini_controls;
+
+				s_set.controls_rounded_border = ss.controls_rounded_border;
+				s_set.animations_background = ss.animations_background;
+
+				if (this.mpreview !== null) {
+					this.update_mpreview();
+				}
+			},
+			update_mpreview: function () {
 				// Rounded borders
-				if (is_chrome || !set.style.controls_rounded_border) {
-					style.add_class(v_nodes.seek_bar, b_class);
-					style.add_class(v_nodes.volume_bar, b_class);
-				}
-				else {
-					style.remove_class(v_nodes.seek_bar, b_class);
-					style.remove_class(v_nodes.volume_bar, b_class);
-				}
-			},
+				this.mpreview.set_vcontrols_borders_rounded(!is_chrome && this.settings.style.controls_rounded_border);
+				this.mpreview.set_background_animations(this.settings.style.animations_background);
 
-			get_window_rect: function () {
-				var doc = document.documentElement;
-
-				var left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0);
-				var top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
-
-				return {
-					left: left,
-					top: top,
-					right: left + (window.innerWidth || doc.clientWidth || 0),
-					bottom: top + (window.innerHeight || doc.clientHeight || 0),
-				};
-			},
-			get_document_rect: function () {
-				var doc = document.documentElement;
-
-				var left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0);
-				var top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
-
-				return {
-					left: left,
-					top: top,
-					right: left + (doc.clientWidth || window.innerWidth || 0),
-					bottom: top + (doc.clientHeight || window.innerHeight || 0),
-				};
-			},
-			get_header_rect: function () {
-				var header = document.getElementById("header-bar");
-				if (header) {
-					var bounds = header.getBoundingClientRect();
-
-					// Document scroll offset
-					var doc = document.documentElement;
-					var left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0);
-					var top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
-
-					return {
-						left: left + bounds.left,
-						top: top + bounds.top,
-						right: left + bounds.right,
-						bottom: top + bounds.bottom,
-					};
-				}
-				else {
-					return {
-						left: 0,
-						top: 0,
-						right: 0,
-						bottom: 0,
-					};
-				}
-			},
-			get_object_rect: function (obj) {
-				var bounds = obj.getBoundingClientRect();
-
-				// Document scroll offset
-				var doc = document.documentElement;
-				var left = (window.pageXOffset || doc.scrollLeft || 0) - (doc.clientLeft || 0);
-				var top = (window.pageYOffset || doc.scrollTop || 0)  - (doc.clientTop || 0);
-
-				return {
-					left: left + bounds.left,
-					top: top + bounds.top,
-					right: left + bounds.right,
-					bottom: top + bounds.bottom,
-				};
+				// Zoom buttons
+				this.mpreview.set_zoom_control_buttons_enabled(this.settings.zoom_buttons);
 			},
 
 		};
@@ -7414,6 +6303,1819 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 
 		return ImageHover;
+
+	})();
+
+	// Media preview base
+	var MediaPreview = (function () {
+
+		var MediaPreviewGenericNodes = function (parent) {
+			// Create the preview container
+			var zoom_border_inner,
+				stat_zoom_inc,
+				stat_zoom_dec,
+				stat_sep,
+				theme = style.theme;
+
+
+			// Vars
+			this.stats_zoom_controls_enabled = true;
+			this.zoom_controls_hide_timer = null;
+			this.mouse_in_stats = false;
+			this.on_hide_zoom_controls_timeout_bind = hide_zoom_controls.bind(parent, true, false);
+
+
+			// Background
+			this.background = document.createElement("div");
+			this.background.className = "iex_mpreview_background" + theme; // iex_mpreview_background_disabled iex_mpreview_background_visible iex_mpreview_background_fallback
+
+
+			// Zoom borders
+			this.zoom_borders = document.createElement("div");
+			this.zoom_borders.className = "iex_mpreview_zoom_borders" + theme; // iex_mpreview_zoom_borders_visible iex_mpreview_zoom_borders_vertical iex_mpreview_zoom_borders_horizontal
+
+			zoom_border_inner = document.createElement("div");
+			zoom_border_inner.className = "iex_mpreview_zoom_borders_inner" + theme;
+			this.zoom_borders.appendChild(zoom_border_inner);
+
+
+			// Stats container
+			this.stats_container = document.createElement("div");
+			this.stats_container.className = "iex_mpreview_stats_container" + theme;
+
+			// Zoom controls
+			this.zoom_controls = document.createElement("span");
+			this.zoom_controls.className = "iex_mpreview_stat iex_mpreview_stat_zoom_controls" + theme; // iex_mpreview_stat_zoom_controls_visible iex_mpreview_stat_zoom_controls_fixed
+			this.stats_container.appendChild(this.zoom_controls);
+
+			stat_zoom_inc = document.createElement("span");
+			stat_zoom_inc.className = "iex_mpreview_stat_zoom_control iex_mpreview_stat_zoom_control_increase" + theme;
+			stat_zoom_inc.textContent = "+";
+			this.zoom_controls.appendChild(stat_zoom_inc);
+
+			stat_zoom_dec = document.createElement("span");
+			stat_zoom_dec.className = "iex_mpreview_stat_zoom_control iex_mpreview_stat_zoom_control_decrease" + theme;
+			stat_zoom_dec.textContent = "\u2212";
+			this.zoom_controls.appendChild(stat_zoom_dec);
+
+			this.zoom_controls_offset = document.createElement("span");
+			this.zoom_controls_offset.className = "iex_mpreview_stat_zoom_controls_offset" + theme;
+			this.stats_container.appendChild(this.zoom_controls_offset);
+
+
+
+			// Stats items
+			this.stat_zoom_container = document.createElement("span");
+			this.stat_zoom_container.className = "iex_mpreview_stat" + theme;
+			this.stats_container.appendChild(this.stat_zoom_container);
+
+			this.stat_zoom = document.createElement("span");
+			this.stat_zoom.className = "" + theme;
+			this.stat_zoom_container.appendChild(this.stat_zoom);
+
+			this.stat_zoom_fit = document.createElement("span");
+			this.stat_zoom_fit.className = "" + theme;
+			this.stat_zoom_container.appendChild(this.stat_zoom_fit);
+
+			stat_sep = document.createElement("span");
+			stat_sep.className = "iex_mpreview_stat_sep" + theme;
+			stat_sep.textContent = ", ";
+			this.stats_container.appendChild(stat_sep);
+
+			this.stat_status = document.createElement("span");
+			this.stat_status.className = "iex_mpreview_stat" + theme;
+			this.stats_container.appendChild(this.stat_status);
+
+			stat_sep = document.createElement("span");
+			stat_sep.className = "iex_mpreview_stat_sep" + theme;
+			stat_sep.textContent = ", ";
+			this.stats_container.appendChild(stat_sep);
+
+			this.stat_resolution = document.createElement("span");
+			this.stat_resolution.className = "iex_mpreview_stat" + theme;
+			this.stats_container.appendChild(this.stat_resolution);
+
+			stat_sep = document.createElement("span");
+			stat_sep.className = "iex_mpreview_stat_sep" + theme;
+			stat_sep.textContent = ", ";
+			this.stats_container.appendChild(stat_sep);
+
+			this.stat_filesize = document.createElement("span");
+			this.stat_filesize.className = "iex_mpreview_stat" + theme;
+			this.stats_container.appendChild(this.stat_filesize);
+
+			stat_sep = document.createElement("span");
+			stat_sep.className = "iex_mpreview_stat_sep" + theme;
+			stat_sep.textContent = ", ";
+			this.stats_container.appendChild(stat_sep);
+
+			this.stat_filename = document.createElement("span");
+			this.stat_filename.className = "iex_mpreview_stat" + theme;
+			this.stats_container.appendChild(this.stat_filename);
+
+
+			// Events
+			parent.add_event_listener(this.stats_container, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_mouseenter , null ]), false);
+			parent.add_event_listener(this.stats_container, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_mouseleave , null ]), false);
+			parent.add_event_listener(this.stat_zoom, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_mouseenter , null ]), false);
+			parent.add_event_listener(this.zoom_controls, "mousedown", on_stats_zoom_controls_mousedown.bind(parent), false);
+			parent.add_event_listener(this.zoom_controls, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_controls_mouseenter , null ]), false);
+			parent.add_event_listener(this.zoom_controls, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_controls_mouseleave , null ]), false);
+			parent.add_event_listener(stat_zoom_inc, "click", on_stats_zoom_control_click.bind(parent, 1), false);
+			parent.add_event_listener(stat_zoom_dec, "click", on_stats_zoom_control_click.bind(parent, -1), false);
+
+
+			// Add
+			parent.cpreview.add_content(this.background);
+			parent.cpreview.add_overlay(this.stats_container, true);
+			parent.cpreview.add_overlay(this.zoom_borders);
+		};
+		var MediaPreviewImageNodes = function (parent) {
+			var theme = style.theme;
+
+
+			// Image
+			this.image = document.createElement("img");
+			this.image.className = "iex_mpreview_image" + theme;
+			this.image.setAttribute("alt", "");
+			this.image.setAttribute("title", "");
+
+
+			// Events
+			parent.add_event_listener(this.image, "load", on_image_load.bind(parent), false);
+			parent.add_event_listener(this.image, "error", on_image_error.bind(parent), false);
+
+
+			// Add
+			parent.cpreview.add_content(this.image);
+		};
+		var MediaPreviewVideoNodes = function (parent) {
+			var svgns = "http://www.w3.org/2000/svg",
+				theme = style.theme,
+				c_inner,
+				svg_e1, svg_e2,
+				c_div1, c_div2, c_div3, c_div4, c_buttons_left, c_buttons_right,
+				c_seek_container, c_play_button,
+				c_volume_button;
+
+			// Vars
+			this.interacted = false;
+
+			this.seeking = false;
+			this.seeking_paused = false;
+			this.volume_modifying = false;
+
+			this.mouse_capturing_rect = null;
+			this.mouse_capturing_element = null;
+			this.on_capture_mousemove = on_vcontrols_capture_mousemove.bind(parent);
+			this.on_capture_mouseup = on_vcontrols_capture_mouseup.bind(parent);
+
+
+			// Video
+			this.video = document.createElement("video");
+			this.video.className = "iex_mpreview_video" + theme;
+
+
+
+			// Controller overlay
+			this.overlay = document.createElement("div");
+			this.overlay.className = "iex_mpreview_vcontrols_container" + theme;
+
+			c_inner = document.createElement("div");
+			c_inner.className = "iex_mpreview_vcontrols_container_inner" + theme;
+			this.overlay.appendChild(c_inner);
+
+			this.overlay_table = document.createElement("div");
+			this.overlay_table.className = "iex_mpreview_vcontrols_table" + theme; // iex_mpreview_vcontrols_table_visible iex_mpreview_vcontrols_table_visible_important iex_mpreview_vcontrols_table_mini
+			c_inner.appendChild(this.overlay_table);
+
+
+
+			// Pause/play button
+			c_buttons_left = document.createElement("div");
+			c_buttons_left.className = "iex_mpreview_vcontrols_button_container" + theme;
+			this.overlay_table.appendChild(c_buttons_left);
+
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_mpreview_vcontrols_button_container_inner" + theme;
+			c_buttons_left.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_mpreview_vcontrols_button_container_inner2" + theme;
+			c_div1.appendChild(c_div2);
+
+			// Mouse event controller
+			c_play_button = document.createElement("div");
+			c_play_button.className = "iex_mpreview_vcontrols_button_mouse_controller" + theme;
+			c_div2.appendChild(c_play_button);
+
+			// SVG image
+			this.svg_play = document.createElementNS(svgns, "svg");
+			this.svg_play.setAttribute("class", "iex_svg_play_button"); // iex_svg_play_button_playing iex_svg_play_button_looping
+			this.svg_play.setAttribute("svgns", svgns);
+			this.svg_play.setAttribute("width", "2em");
+			this.svg_play.setAttribute("height", "2em");
+			this.svg_play.setAttribute("viewBox", "0 0 1 1");
+			c_div2.appendChild(this.svg_play);
+
+			svg_e1 = document.createElementNS(svgns, "g");
+			svg_e1.setAttribute("class", "iex_svg_button_scale_group");
+			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
+			this.svg_play.appendChild(svg_e1);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_play_button_play_icon iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0,0 0,1 1,0.5");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_play_button_loop_icon iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0.1,0.05 1,0.5 0.1,0.95");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_play_button_loop_icon iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0,0.7 0.4,0.5 0,0.3");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_play_button_pause_icon iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0.125,0 0.375,0 0.375,1 0.125,1");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_play_button_pause_icon iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0.625,0 0.875,0 0.875,1 0.625,1");
+			svg_e1.appendChild(svg_e2);
+
+
+
+			// Seek bar
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_mpreview_vcontrols_seek_container" + theme;
+			this.overlay_table.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_mpreview_vcontrols_seek_container_inner" + theme;
+			c_div1.appendChild(c_div2);
+
+			this.seek_bar = document.createElement("div");
+			this.seek_bar.className = "iex_mpreview_vcontrols_seek_bar" + theme; // iex_mpreview_vcontrols_no_border_radius
+			c_div2.appendChild(this.seek_bar);
+
+			c_div3 = document.createElement("div");
+			c_div3.className = "iex_mpreview_vcontrols_seek_bar_bg" + theme;
+			this.seek_bar.appendChild(c_div3);
+
+			this.load_progress = document.createElement("div");
+			this.load_progress.className = "iex_mpreview_vcontrols_seek_bar_loaded" + theme;
+			c_div3.appendChild(this.load_progress);
+
+			this.play_progress = document.createElement("div");
+			this.play_progress.className = "iex_mpreview_vcontrols_seek_bar_played" + theme;
+			c_div3.appendChild(this.play_progress);
+
+			c_div4 = document.createElement("div");
+			c_div4.className = "iex_mpreview_vcontrols_seek_time_table" + theme;
+			c_div3.appendChild(c_div4);
+
+			this.time_current = document.createElement("div");
+			this.time_current.className = "iex_mpreview_vcontrols_seek_time_current" + theme;
+			c_div4.appendChild(this.time_current);
+
+			this.time_duration = document.createElement("div");
+			this.time_duration.className = "iex_mpreview_vcontrols_seek_time_duration" + theme;
+			c_div4.appendChild(this.time_duration);
+
+
+
+			// Volume bar/mute button
+			c_buttons_right = document.createElement("div");
+			c_buttons_right.className = "iex_mpreview_vcontrols_button_container" + theme;
+			this.overlay_table.appendChild(c_buttons_right);
+
+			c_div1 = document.createElement("div");
+			c_div1.className = "iex_mpreview_vcontrols_button_container_inner" + theme;
+			c_buttons_right.appendChild(c_div1);
+
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_mpreview_vcontrols_button_container_inner2" + theme;
+			c_div1.appendChild(c_div2);
+
+			// Mouse event controller
+			c_volume_button = document.createElement("div");
+			c_volume_button.className = "iex_mpreview_vcontrols_button_mouse_controller" + theme;
+			c_div2.appendChild(c_volume_button);
+
+			// SVG image
+			this.svg_volume = document.createElementNS(svgns, "svg");
+			this.svg_volume.setAttribute("class", "iex_svg_volume_button"); // iex_svg_volume_button_muted iex_svg_volume_button_high iex_svg_volume_button_medium iex_svg_volume_button_low
+			this.svg_volume.setAttribute("svgns", svgns);
+			this.svg_volume.setAttribute("width", "2em");
+			this.svg_volume.setAttribute("height", "2em");
+			this.svg_volume.setAttribute("viewBox", "0 0 1 1");
+			c_div2.appendChild(this.svg_volume);
+
+			svg_e1 = document.createElementNS(svgns, "g");
+			svg_e1.setAttribute("class", "iex_svg_button_scale_group");
+			svg_e1.setAttribute("transform", "translate(0.25,0.25) scale(0.5)");
+			this.svg_volume.appendChild(svg_e1);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_speaker iex_svg_button_fill");
+			svg_e2.setAttribute("points", "0,0.3 0.2,0.3 0.5,0 0.6,0 0.6,1 0.5,1 0.2,0.7 0,0.7");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "path");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_wave_big iex_svg_button_fill");
+			svg_e2.setAttribute("d", "M 0.75,0.1 Q 1.3,0.5 0.75,0.9 L 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "path");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_wave_small iex_svg_button_fill");
+			svg_e2.setAttribute("d", "M 0.75,0.75 Q 1.05,0.5 0.75,0.25 Z");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "g");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_wave_mute_icon");
+			svg_e1.appendChild(svg_e2);
+			svg_e1 = svg_e2;
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_wave_mute_icon_polygon");
+			svg_e2.setAttribute("points", "0.7,0.3 1.0,0.6 0.9,0.7 0.6,0.4");
+			svg_e1.appendChild(svg_e2);
+
+			svg_e2 = document.createElementNS(svgns, "polygon");
+			svg_e2.setAttribute("class", "iex_svg_volume_button_wave_mute_icon_polygon");
+			svg_e2.setAttribute("points", "0.7,0.7 1.0,0.4 0.9,0.3 0.6,0.6");
+			svg_e1.appendChild(svg_e2);
+
+
+
+			// Volume bar
+			c_div2 = document.createElement("div");
+			c_div2.className = "iex_mpreview_vcontrols_volume_container_position" + theme;
+			c_div1.appendChild(c_div2);
+
+			this.volume_container = document.createElement("div");
+			this.volume_container.className = "iex_mpreview_vcontrols_volume_container" + theme; // iex_mpreview_vcontrols_volume_container_visible iex_mpreview_vcontrols_volume_container_visible_important
+			c_div2.appendChild(this.volume_container);
+
+			this.volume_bar = document.createElement("div");
+			this.volume_bar.className = "iex_mpreview_vcontrols_volume_bar" + theme; // iex_mpreview_vcontrols_no_border_radius
+			this.volume_container.appendChild(this.volume_bar);
+
+			c_div3 = document.createElement("div");
+			c_div3.className = "iex_mpreview_vcontrols_volume_bar_bg" + theme;
+			this.volume_bar.appendChild(c_div3);
+
+			this.volume_progress = document.createElement("div");
+			this.volume_progress.className = "iex_mpreview_vcontrols_volume_bar_level" + theme;
+			c_div3.appendChild(this.volume_progress);
+
+
+			// Events
+			parent.add_event_listener(this.video, "loadedmetadata", on_video_loadedmetadata.bind(parent), false);
+			parent.add_event_listener(this.video, "canplay", on_video_canplay.bind(parent), false);
+			parent.add_event_listener(this.video, "canplaythrough", on_video_canplaythrough.bind(parent), false);
+			parent.add_event_listener(this.video, "error", on_video_error.bind(parent), false);
+			parent.add_event_listener(this.video, "progress", on_video_progress.bind(parent), false);
+			parent.add_event_listener(this.video, "timeupdate", on_video_timeupdate.bind(parent), false);
+			parent.add_event_listener(this.video, "ended", on_video_ended.bind(parent), false);
+
+			var prevent = on_vcontrols_prevent_default_mousedown.bind(parent);
+
+			parent.add_event_listener(c_inner, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_mouseenter , null ]), false);
+			parent.add_event_listener(c_inner, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_mouseleave , null ]), false);
+			parent.add_event_listener(this.overlay_table, "mousedown", on_vcontrols_container_mousedown.bind(parent), false);
+			parent.add_event_listener(c_play_button, "click", on_vcontrols_play_button_click.bind(parent), false);
+			parent.add_event_listener(c_volume_button, "click", on_vcontrols_volume_button_click.bind(parent), false);
+			parent.add_event_listener(c_volume_button, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_volume_button_mouseenter , null ]), false);
+			parent.add_event_listener(c_buttons_right, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_volume_button_container_mouseleave , null ]), false);
+			parent.add_event_listener(this.seek_bar, "mousedown", on_vcontrols_seek_bar_mousedown.bind(parent), false);
+			parent.add_event_listener(this.volume_bar, "mousedown", on_vcontrols_volume_bar_mousedown.bind(parent), false);
+			parent.add_event_listener(this.time_current, "mousedown", prevent, false);
+			parent.add_event_listener(this.time_duration, "mousedown", prevent, false);
+
+
+			// Add
+			parent.cpreview.add_content(this.video);
+			parent.cpreview.add_overlay(this.overlay);
+		};
+
+
+
+		var MediaPreview = function () {
+			// Setup preview
+			this.cpreview = new ContentPreview();
+			this.event_listeners = [];
+
+			// Events
+			var cp_nodes = this.cpreview.nodes,
+				event_bind;
+
+			this.add_event_listener(cp_nodes.container, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ this , on_mouseenter , null ]), false);
+			this.add_event_listener(cp_nodes.container, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ this , on_mouseleave , null ]), false);
+			this.add_event_listener(cp_nodes.container, "mousemove", on_mousemove.bind(this), false);
+			this.add_event_listener(cp_nodes.container, "mousewheel", (event_bind = on_mousewheel.bind(this)), false);
+			this.add_event_listener(cp_nodes.container, "DOMMouseScroll", event_bind, false);
+			this.add_event_listener(cp_nodes.container, "mousedown", on_mousedown.bind(this), false);
+			this.add_event_listener(cp_nodes.container, "contextmenu", on_contextmenu.bind(this), false);
+
+			this.add_event_listener(cp_nodes.overflow, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ this , on_overflow_mouseenter , null ]), false);
+
+
+			// Setup classes
+			style.add_class(this.cpreview.nodes.padding, "iex_mpreview_padding");
+
+			// Setup nodes
+			this.nodes = new MediaPreviewGenericNodes(this);
+			this.nodes_image = null;
+			this.nodes_video = null;
+
+
+			// Settings
+			this.type = TYPE_NONE;
+
+			this.zoom = 1;
+
+			this.fit = false;
+			this.fit_large = false;
+			this.fit_large_allowed = true;
+			this.fit_axis = 0;
+
+			this.style = {
+				vcontrols_rounded: true,
+			};
+
+			this.size = {
+				width: 0,
+				height: 0,
+				acquired: false
+			};
+
+			// Events
+			this.events = {
+				"image_load": [],
+				"image_error": [],
+
+				"video_ready": [],
+				"video_can_play": [],
+				"video_can_play_through": [],
+				"video_load": [],
+				"video_error": [],
+				"video_volume_change": [],
+
+				"size_change": [],
+
+				"mouse_wheel": [],
+				"mouse_enter": [],
+				"mouse_leave": [],
+				"mouse_down": [],
+				"mouse_move": [],
+				"mouse_enter_main": [],
+
+				"stats_zoom_control_click": [],
+			};
+		};
+
+
+
+		var TYPE_NONE = 0;
+		var TYPE_IMAGE = 1;
+		var TYPE_VIDEO = 2;
+
+
+
+		var trigger = function (event, data) {
+			// Trigger
+			if (event in this.events) {
+				var e_list = this.events[event];
+				for (var i = 0; i < e_list.length; ++i) {
+					e_list[i].call(this, data);
+				}
+			}
+		};
+
+		var format_video_time = function (time) {
+			time = Math.floor(time + 0.5);
+
+			var s = (time % 60).toString();
+			if (s.length < 2) s = "0" + s;
+
+			time = Math.floor(time / 60);
+			return time + ":" + s;
+		};
+
+		var update_size = function (width_new, height_new) {
+			// Change
+			this.size.width = width_new;
+			this.size.height = height_new;
+			this.size.acquired = true;
+
+			// Event
+			trigger.call(this, "size_change", {
+				width: width_new,
+				height: height_new,
+			});
+		};
+		var update_video_duration_status = function () {
+			var video = this.nodes_video.video,
+				duration = video.duration;
+
+			// Update seek bar
+			if (isNaN(duration)) {
+				// Update time numbers
+				this.nodes_video.time_duration.textContent = "";
+			}
+			else {
+				// Update time numbers
+				this.nodes_video.time_duration.textContent = format_video_time.call(this, duration);
+			}
+		};
+		var update_video_seek_status = function (time) {
+			var video = this.nodes_video.video,
+				duration = video.duration;
+
+			// Update seek bar
+			if (time < 0 || isNaN(duration)) {
+				// Bar
+				this.nodes_video.play_progress.style.width = "0";
+
+				// Update time numbers
+				this.nodes_video.time_current.textContent = "";
+			}
+			else {
+				// Bar
+				this.nodes_video.play_progress.style.width = ((time / duration) * 100).toFixed(2) + "%";
+
+				// Update time numbers
+				this.nodes_video.time_current.textContent = format_video_time.call(this, time);
+			}
+		};
+		var update_video_play_status = function (paused) {
+			var loop = this.nodes_video.video.loop,
+				svg_play = this.nodes_video.svg_play;
+
+			// Update button
+			if (paused) {
+				style.remove_class(svg_play, "iex_svg_play_button_playing");
+			}
+			else {
+				style.add_class(svg_play, "iex_svg_play_button_playing");
+			}
+			if (loop) {
+				style.add_class(svg_play, "iex_svg_play_button_looping");
+			}
+			else {
+				style.remove_class(svg_play, "iex_svg_play_button_looping");
+			}
+		};
+
+		var set_video_volume = function (volume, reason, interacted) {
+			var svg_volume = this.nodes_video.svg_volume;
+
+			// Set volume on video
+			if (volume >= 0) {
+				if (volume > 1) volume = 1;
+				this.nodes_video.video.volume = volume;
+			}
+			else {
+				volume = this.nodes_video.video.volume;
+			}
+
+			// Update bar
+			this.nodes_video.volume_progress.style.height = (volume * 100).toFixed(2) + "%";
+
+			// Update icons
+			if (volume > 0.625) {
+				style.change_classes_svg(svg_volume, "iex_svg_volume_button_high", "iex_svg_volume_button_low iex_svg_volume_button_medium");
+			}
+			else if (volume > 0.125) {
+				style.change_classes_svg(svg_volume, "iex_svg_volume_button_medium", "iex_svg_volume_button_low iex_svg_volume_button_high");
+			}
+			else {
+				style.change_classes_svg(svg_volume, "iex_svg_volume_button_low", "iex_svg_volume_button_medium iex_svg_volume_button_high");
+			}
+
+			// Interacted
+			if (interacted) this.nodes_video.interacted = true;
+
+			// Event
+			trigger.call(this, "video_volume_change", {
+				reason: reason,
+				volume: volume
+			});
+		};
+
+		var setup_vcontrols_mouse_capture = function () {
+			// Setup mouse capturing events
+			if (
+				this.nodes_video.mouse_capturing_element === null &&
+				(this.nodes_video.mouse_capturing_element = document.documentElement) !== null
+			) {
+				this.nodes_video.mouse_capturing_element.addEventListener("mousemove", this.nodes_video.on_capture_mousemove, false);
+				this.nodes_video.mouse_capturing_element.addEventListener("mouseup", this.nodes_video.on_capture_mouseup, false);
+				update_vcontrols_mouse_capture.call(this);
+			}
+		};
+		var teardown_vcontrols_mouse_capture = function () {
+			// Destroy mouse capturing events
+			if (this.nodes_video.mouse_capturing_element !== null) {
+				this.nodes_video.mouse_capturing_element.removeEventListener("mousemove", this.nodes_video.on_capture_mousemove, false);
+				this.nodes_video.mouse_capturing_element.removeEventListener("mouseup", this.nodes_video.on_capture_mouseup, false);
+				this.nodes_video.mouse_capturing_element = null;
+			}
+		};
+		var update_vcontrols_mouse_capture = function () {
+			// Update node rectangle
+			if (this.nodes_video.seeking) {
+				this.nodes_video.mouse_capturing_rect = style.get_object_rect(this.nodes_video.seek_bar);
+			}
+			else if (this.nodes_video.volume_modifying) {
+				this.nodes_video.mouse_capturing_rect = style.get_object_rect(this.nodes_video.volume_bar);
+			}
+		};
+
+		var show_zoom_controls = function (force_open) {
+			// Stop timer
+			if (this.nodes.zoom_controls_hide_timer !== null) {
+				clearTimeout(this.nodes.zoom_controls_hide_timer);
+				this.nodes.zoom_controls_hide_timer = null;
+			}
+
+			// Display
+			if (force_open) {
+				var zoom_controls = this.nodes.zoom_controls,
+					z_rect;
+
+				style.add_class(zoom_controls, "iex_mpreview_stat_visible");
+				z_rect = style.get_object_rect(zoom_controls);
+
+				this.nodes.zoom_controls_offset.style.width = (z_rect.right - z_rect.left).toFixed(2) + "px";
+			}
+		};
+		var hide_zoom_controls = function (instant, timer_check) {
+			if (instant) {
+				// Hide
+				style.remove_class(this.nodes.zoom_controls, "iex_mpreview_stat_visible");
+				this.nodes.zoom_controls_offset.style.width = "";
+
+				// Stop timer
+				if (timer_check && this.nodes.zoom_controls_hide_timer !== null) {
+					clearTimeout(this.nodes.zoom_controls_hide_timer);
+				}
+				this.nodes.zoom_controls_hide_timer = null;
+			}
+			else {
+				// Set timer
+				this.nodes.zoom_controls_hide_timer = setTimeout(this.nodes.on_hide_zoom_controls_timeout_bind, 10);
+			}
+		};
+		var set_zoom_controls_fixed = function (fixed) {
+			// Set fixed
+			var zoom_controls = this.nodes.zoom_controls;
+
+			if (fixed) {
+				var w_rect = style.get_document_rect(),
+					z_rect = style.get_object_rect(zoom_controls);
+
+				// Fix
+				style.add_class(zoom_controls, "iex_mpreview_stat_zoom_controls_fixed");
+				zoom_controls.style.left = (z_rect.left - w_rect.left).toFixed(2) + "px";
+				zoom_controls.style.top = (z_rect.top - w_rect.top).toFixed(2) + "px";
+			}
+			else {
+				// Un-fix
+				style.remove_class(zoom_controls, "iex_mpreview_stat_zoom_controls_fixed");
+				zoom_controls.style.left = "";
+				zoom_controls.style.top = "";
+			}
+		};
+
+		var update_stat_sep_visibility = function (node, visible) {
+			var n;
+
+			if (visible) {
+				// Previous
+				for (n = node; (n = n.previousSibling); ) {
+					if (style.has_class(n, "iex_mpreview_stat_sep_visible")) break;
+					if (style.has_class(n, "iex_mpreview_stat_visible")) {
+						if ((n = node.previousSibling) !== null && style.has_class(n, "iex_mpreview_stat_sep")) {
+							style.add_class(n, "iex_mpreview_stat_sep_visible");
+						}
+						break;
+					}
+				}
+
+				// Next
+				for (n = node; (n = n.nextSibling); ) {
+					if (style.has_class(n, "iex_mpreview_stat_sep_visible")) break;
+					if (style.has_class(n, "iex_mpreview_stat_visible")) {
+						if ((n = node.nextSibling) !== null && style.has_class(n, "iex_mpreview_stat_sep")) {
+							style.add_class(n, "iex_mpreview_stat_sep_visible");
+						}
+						break;
+					}
+				}
+			}
+			else {
+				// Hide next
+				n = node.nextSibling;
+				if (n !== null && style.has_class(n, "iex_mpreview_stat_sep")) {
+					if (style.has_class(n, "iex_mpreview_stat_sep_visible")) {
+						style.remove_class(n, "iex_mpreview_stat_sep_visible");
+						return;
+					}
+				}
+
+				// Hide previous
+				n = node.previousSibling;
+				if (n !== null && style.has_class(n, "iex_mpreview_stat_sep")) {
+					style.remove_class(n, "iex_mpreview_stat_sep_visible");
+				}
+			}
+		};
+
+
+		var on_window_resize = function (event) {
+			// Update bar position
+			if (this.nodes_video.mouse_capturing_element !== null) {
+				update_vcontrols_mouse_capture.call(this);
+			}
+		};
+		var on_window_scroll = function (event) {
+			// Update bar position
+			if (this.nodes_video.mouse_capturing_element !== null) {
+				update_vcontrols_mouse_capture.call(this);
+			}
+		};
+
+		var on_video_loadedmetadata = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			var video = this.nodes_video.video,
+				w = video.videoWidth,
+				h = video.videoHeight;
+
+
+			// Update seek bar
+			update_video_duration_status.call(this);
+			update_video_seek_status.call(this, 0);
+
+			// Un-hide video
+			style.remove_class(video, "iex_mpreview_video_not_ready");
+
+			// Update size
+			if (!this.size.acquired || (this.size.width != w || this.size.height != h)) {
+				update_size.call(this, w, h);
+				style.remove_class(video, "iex_mpreview_video_unsized");
+			}
+
+			// Event
+			trigger.call(this, "video_ready", {});
+		};
+		var on_video_canplay = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			// Event
+			trigger.call(this, "video_can_play", {});
+		};
+		var on_video_canplaythrough = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			// Event
+			trigger.call(this, "video_can_play_through", {});
+		};
+		var on_video_progress = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			var video = this.nodes_video.video,
+				percent = (video.buffered.end(0) / video.duration);
+
+			// Update progress bar
+			this.nodes_video.load_progress.style.width = (percent * 100).toFixed(2) + "%";
+
+			// Complete
+			if (percent >= 1.0) {
+				trigger.call(this, "video_load", {});
+			}
+		};
+		var on_video_error = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			// Hide video
+			style.remove_class(this.nodes_video.video, "iex_mpreview_video_visible");
+			this.nodes_video.video.removeAttribute("src");
+
+			// Error
+			trigger.call(this, "video_error", {
+				reason: "error"
+			});
+		};
+		var on_video_timeupdate = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			// Update time progress
+			update_video_seek_status.call(this, this.nodes_video.video.currentTime);
+		};
+		var on_video_ended = function (event) {
+			if (this.type != TYPE_VIDEO) return;
+
+			// Update buttons
+			update_video_play_status.call(this, this.nodes_video.video.paused);
+		};
+
+		var on_vcontrols_mouseenter = function (node, data, event) {
+			// Do not show for non-video
+			if (this.type != TYPE_VIDEO) return;
+
+			// Show controls
+			style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
+			style.add_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible");
+		};
+		var on_vcontrols_mouseleave = function (node, data, event) {
+			// Hide controls
+			style.remove_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible");
+		};
+		var on_vcontrols_container_mousedown = function (event) {
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+
+			// Ignore if not left mb
+			if (button != 1) return;
+
+			// Stop event
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_vcontrols_play_button_click = function (event) {
+			// Play/pause
+			var video = this.nodes_video.video;
+
+			this.set_video_paused(!video.paused, (event.shiftKey && video.paused) ? (!video.loop) : undefined);
+		};
+		var on_vcontrols_volume_button_click = function (event) {
+			// Mute/unmute
+			this.set_video_muted(!this.nodes_video.video.muted);
+		};
+		var on_vcontrols_volume_button_mouseenter = function (node, data, event) {
+			// Show volume bar
+			style.add_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
+		};
+		var on_vcontrols_volume_button_container_mouseleave = function (node, data, event) {
+			// Hide volume bar
+			style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
+		};
+		var on_vcontrols_seek_bar_mousedown = function (event) {
+			// Get the mouse button
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+			if (button != 1) return;
+
+			// Begin seeking
+			var video = this.nodes_video.video;
+
+			// Set paused state
+			this.nodes_video.seeking = true;
+			this.nodes_video.seeking_paused = video.paused;
+			if (!video.paused) video.pause();
+
+			// Force visibility
+			style.add_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible_important");
+
+			// Setup window mousemove and mouseup events
+			setup_vcontrols_mouse_capture.call(this);
+
+			// Initial update
+			on_vcontrols_capture_mousemove.call(this, event);
+
+			// Stop
+			event.stopPropagation();
+			event.preventDefault();
+			return false;
+		};
+		var on_vcontrols_volume_bar_mousedown = function (event) {
+			// Get the mouse button
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+			if (button != 1) return;
+
+			// Begin volume changing
+			var video = this.nodes_video.video;
+
+			// Set paused state
+			this.nodes_video.volume_modifying = true;
+
+			// Force visibility
+			style.add_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible_important");
+			style.add_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible_important");
+
+			// Setup window mousemove and mouseup events
+			setup_vcontrols_mouse_capture.call(this);
+
+			// Initial update
+			on_vcontrols_capture_mousemove.call(this, event);
+
+			// Stop
+			event.stopPropagation();
+			event.preventDefault();
+			return false;
+		};
+		var on_vcontrols_prevent_default_mousedown = function (event) {
+			event.preventDefault();
+			return false;
+		};
+
+		var on_vcontrols_capture_mousemove = function (event) {
+			// Begin seeking
+			var video = this.nodes_video.video,
+				bar_rect = this.nodes_video.mouse_capturing_rect,
+				percent, x, y;
+
+
+			// Get mouse x/y
+			if (event.pageX == null && (event = event || window.event).clientX != null) {
+				var html = document.documentElement, body = document.body;
+				if (html && body) {
+					x = ((event.clientX || 0) + (html.scrollLeft || (body && body.scrollLeft) || 0)) - (html.clientLeft || 0);
+					y = ((event.clientY || 0) + (html.scrollTop || (body && body.scrollTop) || 0)) - (html.clientTop || 0);
+				}
+			}
+			else {
+				x = event.pageX || 0;
+				y = event.pageY || 0;
+			}
+
+
+			// Set paused state
+			if (this.nodes_video.seeking) {
+				var duration = video.duration;
+				if (!isNaN(duration)) {
+					var loaded = video.buffered.end(0) / duration;
+
+					// Get percent
+					percent = (x - bar_rect.left) / (bar_rect.right - bar_rect.left);
+
+					// Bound
+					if (percent < 0) percent = 0;
+					else if (percent > loaded) percent = loaded;
+
+					// Apply
+					percent *= duration;
+					video.currentTime = percent;
+					update_video_seek_status.call(this, percent);
+				}
+			}
+			else if (this.nodes_video.volume_modifying) {
+				// Get percent
+				percent = 1.0 - (y - bar_rect.top) / (bar_rect.bottom - bar_rect.top);
+
+				// Bound
+				if (percent < 0) percent = 0;
+				else if (percent > 1.0) percent = 1.0;
+
+				// Set volume
+				set_video_volume.call(this, percent, "seeking", true);
+			}
+		};
+		var on_vcontrols_capture_mouseup = function (event) {
+			if (this.nodes_video.seeking) {
+				// Unpause
+				if (!this.nodes_video.seeking_paused) this.nodes_video.video.play();
+
+				// Un-force visibility
+				style.remove_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible_important");
+
+				// Done
+				this.nodes_video.seeking = false;
+			}
+			else if (this.nodes_video.volume_modifying) {
+				// Save volume
+				set_video_volume.call(this, -1, "seek", true);
+
+				// Un-force visibility
+				style.remove_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible_important");
+				style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible_important");
+
+				// Done
+				this.nodes_video.volume_modifying = false;
+			}
+
+			// Stop capture
+			teardown_vcontrols_mouse_capture.call(this);
+		};
+
+		var on_image_load = function (event) {
+			if (this.type != TYPE_IMAGE) return;
+
+			// True size
+			var w = this.nodes_image.image.naturalWidth,
+				h = this.nodes_image.image.naturalHeight;
+
+			// Update size
+			if (!this.size.acquired || (this.size.width != w || this.size.height != h)) {
+				update_size.call(this, w, h);
+				style.remove_class(this.nodes_image.image, "iex_mpreview_image_unsized");
+			}
+
+			// Event
+			trigger.call(this, "image_load", {});
+		};
+		var on_image_error = function (event) {
+			if (this.type != TYPE_IMAGE) return;
+
+			// Hide image
+			style.remove_class(this.nodes_image.image, "iex_mpreview_image_visible");
+			this.nodes_image.image.removeAttribute("src");
+
+			// Error
+			trigger.call(this, "image_error", {
+				reason: "error"
+			});
+		};
+
+		var on_mousewheel = function (event) {
+			// Get direction
+			var delta = (event.wheelDelta || -event.detail || 0);
+			if (delta < 0) delta = -1;
+			else if (delta > 0) delta = 1;
+
+			// Trigger event
+			trigger.call(this, "mouse_wheel", {
+				delta: delta
+			});
+
+			// Prevent
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_mouseenter = function (node, data, event) {
+			// Trigger event
+			trigger.call(this, "mouse_enter", {});
+		};
+		var on_mouseleave = function (node, data, event) {
+			// Trigger event
+			trigger.call(this, "mouse_leave", {});
+		};
+		var on_mousedown = function (event) {
+			// Get the mouse button
+			var button = 0; // 1=left, 2=middle, 3=right
+            if (event.which) {
+				if (event.which == 1) button = 1;
+				else if (event.which == 2) button = 2;
+				else if (event.which == 3) button = 3;
+            }
+			else {
+				if ((event.button & 1) != 0) button = 1;
+				else if ((event.button & 2) != 0) button = 3;
+				else if ((event.button & 4) != 0) button = 2;
+			}
+
+			// Activate close
+			trigger.call(this, "mouse_down", {
+				button: button
+			});
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_contextmenu = function (event) {
+			// Stop
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_mousemove = function (event) {
+			// Get mouse x/y
+			var x, y;
+			if (event.pageX == null && (event = event || window.event).clientX != null) {
+				var html = document.documentElement, body = document.body;
+				if (html && body) {
+					x = ((event.clientX || 0) + (html.scrollLeft || (body && body.scrollLeft) || 0)) - (html.clientLeft || 0);
+					y = ((event.clientY || 0) + (html.scrollTop || (body && body.scrollTop) || 0)) - (html.clientTop || 0);
+				}
+			}
+			else {
+				x = event.pageX || 0;
+				y = event.pageY || 0;
+			}
+
+			// Event
+			trigger.call(this, "mouse_move", {
+				x: x,
+				y: y,
+			});
+		};
+		var on_overflow_mouseenter = function (node, data, event) {
+			// Trigger event
+			trigger.call(this, "mouse_enter_main", {});
+		};
+
+		var on_stats_mouseenter = function (node, data, event) {
+			// Stop hiding if it's already open
+			this.nodes.mouse_in_stats = true;
+			show_zoom_controls.call(this, false);
+		};
+		var on_stats_mouseleave = function (node, data, event) {
+			// Hide controls
+			this.nodes.mouse_in_stats = false;
+			hide_zoom_controls.call(this, false, true);
+		};
+		var on_stats_zoom_mouseenter = function (node, data, event) {
+			// Show controls
+			if (this.nodes.stats_zoom_controls_enabled) {
+				show_zoom_controls.call(this, true);
+			}
+		};
+		var on_stats_zoom_controls_mouseenter = function (node, data, event) {
+			// Display controls and make fixed
+			show_zoom_controls.call(this, true);
+			set_zoom_controls_fixed.call(this, true);
+		};
+		var on_stats_zoom_controls_mouseleave = function (node, data, event) {
+			// Make un-fixed and possibly hide
+			set_zoom_controls_fixed.call(this, false);
+			if (!this.nodes.mouse_in_stats) {
+				hide_zoom_controls.call(this, true, true);
+			}
+		};
+		var on_stats_zoom_controls_mousedown = function (event) {
+			// Stop
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+		var on_stats_zoom_control_click = function (delta, event) {
+			// Event
+			trigger.call(this, "stats_zoom_control_click", {
+				delta: delta
+			});
+
+			// Stop
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		};
+
+
+
+		MediaPreview.prototype = {
+			constructor: MediaPreview,
+
+			destroy: function () {
+				// Clear
+				this.clear();
+
+				// Remove events
+				for (var i = 0, el; i < this.event_listeners.length; ++i) {
+					el = this.event_listeners[i];
+					this.remove_event_listener(el[0], el[1], el[2], el[3]);
+				}
+				this.event_listeners = [];
+
+				// Remove
+				this.remove();
+			},
+
+			clear: function () {
+				var type = this.type;
+				this.type = TYPE_NONE;
+
+				// Clear background
+				this.nodes.background.style.backgroundImage = "";
+				style.remove_classes(this.nodes.background, "iex_mpreview_background_visible iex_mpreview_background_visible_full iex_mpreview_background_disabled iex_mpreview_background_fallback");
+
+				if (type == TYPE_IMAGE) {
+					// Remove previous image
+					style.remove_class(this.nodes_image.image, "iex_mpreview_image_visible");
+					this.nodes_image.image.removeAttribute("src");
+				}
+				else if (type == TYPE_VIDEO) {
+					// Clear video
+					style.remove_classes(this.nodes_video.video, "iex_mpreview_video_visible iex_mpreview_video_not_ready");
+					this.nodes_video.video.removeAttribute("src");
+
+					// Clear seek status
+					this.nodes_video.load_progress.style.width = "0";
+					this.nodes_video.play_progress.style.width = "0";
+
+					// Update time numbers
+					this.nodes_video.time_current.textContent = "";
+					this.nodes_video.time_duration.textContent = "";
+
+					update_video_play_status.call(this, true);
+				}
+
+				// Clear stats
+				this.clear_stats();
+
+			},
+
+			on: function (event, callback) {
+				// Add callback
+				if (event in this.events) {
+					this.events[event].push(callback);
+				}
+			},
+			off: function (event, callback) {
+				// Add callback
+				if (event in this.events) {
+					var e_list = this.events[event];
+					for (var i = 0; i < e_list.length; ++i) {
+						if (e_list[i] === callback) {
+							// Remove
+							e_list.splice(i, 1);
+							return true;
+						}
+					}
+				}
+
+				return false;
+			},
+
+			set_image: function (image) {
+				// Unset previous
+				this.clear();
+
+				// Set type
+				this.type = TYPE_IMAGE;
+				if (this.nodes_image === null) this.nodes_image = new MediaPreviewImageNodes(this);
+
+				// Set
+				style.add_class(this.nodes_image.image, "iex_mpreview_image_visible");
+				this.nodes_image.image.setAttribute("src", image);
+			},
+			set_video: function (video) {
+				// Unset previous
+				this.clear();
+
+				// Set type
+				this.type = TYPE_VIDEO;
+				if (this.nodes_video === null) {
+					this.nodes_video = new MediaPreviewVideoNodes(this);
+					this.set_vcontrols_borders_rounded(this.style.vcontrols_rounded);
+				}
+
+				// Set
+				style.add_class(this.nodes_video.video, "iex_mpreview_video_visible");
+				style.add_class(this.nodes_video.video, "iex_mpreview_video_not_ready");
+				this.nodes_video.video.setAttribute("src", video);
+			},
+			set_background: function (image, visibility_level) {
+				// visibility_level: 0=hidden, 1=transparent, 2=full
+				if (image) {
+					// Set background
+					style.add_class(this.nodes.background, "iex_mpreview_background_visible");
+					this.set_background_style(visibility_level);
+					this.nodes.background.style.backgroundImage = 'url("' + image + '")';
+				}
+				else {
+					// Clear background
+					style.remove_classes(this.nodes.background, "iex_mpreview_background_visible iex_mpreview_background_disabled iex_mpreview_background_visible_full");
+					this.nodes.background.style.backgroundImage = "";
+				}
+			},
+			set_background_style: function (visibility_level) {
+				// visibility_level: 0=hidden, 1=transparent, 2=full
+				if (visibility_level == 0) {
+					style.add_class(this.nodes.background, "iex_mpreview_background_disabled");
+					style.remove_class(this.nodes.background, "iex_mpreview_background_visible_full");
+				}
+				else if (visibility_level == 1) {
+					style.remove_classes(this.nodes.background, "iex_mpreview_background_disabled iex_mpreview_background_visible_full");
+				}
+				else {
+					style.add_class(this.nodes.background, "iex_mpreview_background_visible_full");
+					style.remove_class(this.nodes.background, "iex_mpreview_background_disabled");
+				}
+			},
+			set_background_animations: function (animate) {
+				if (animate) style.add_class(this.nodes.background, "iex_transitions");
+				else style.remove_class(this.nodes.background, "iex_transitions");
+			},
+
+			set_view_borders: function (horizontal, vertical) {
+				var zoom_borders = this.nodes.zoom_borders,
+					w = (horizontal * 100).toFixed(2) + "%",
+					h = (vertical * 100).toFixed(2) + "%";
+
+				// Set view borders sizing
+				zoom_borders.style.left = w;
+				zoom_borders.style.top = h;
+				zoom_borders.style.right = w;
+				zoom_borders.style.bottom = h;
+			},
+			set_view_borders_visible: function (visible) {
+				var zoom_borders = this.nodes.zoom_borders;
+
+				// Change visibility
+				if (visible === true) {
+					style.add_class(zoom_borders, "iex_mpreview_zoom_borders_visible");
+				}
+				else {
+					style.remove_class(zoom_borders, "iex_mpreview_zoom_borders_visible");
+				}
+			},
+			set_view_borders_visible_sides: function (horizontal, vertical) {
+				var zoom_borders = this.nodes.zoom_borders;
+
+				// Change visibility
+				if (horizontal) style.add_class(zoom_borders, "iex_mpreview_zoom_borders_horizontal");
+				else style.remove_class(zoom_borders, "iex_mpreview_zoom_borders_horizontal");
+
+				if (vertical) style.add_class(zoom_borders, "iex_mpreview_zoom_borders_vertical");
+				else style.remove_class(zoom_borders, "iex_mpreview_zoom_borders_vertical");
+			},
+			set_mouse_visible: function (visible) {
+				if (visible) style.remove_class(this.cpreview.nodes.padding, "iex_mpreview_mouse_hidden");
+				else style.add_class(this.cpreview.nodes.padding, "iex_mpreview_mouse_hidden");
+			},
+
+			add_to: function (parent) {
+				this.cpreview.add_to(parent);
+			},
+			remove: function () {
+				this.cpreview.remove();
+			},
+
+			set_visible: function (visible) {
+				this.cpreview.set_visible(visible);
+				if (!visible) this.clear();
+			},
+			set_fixed: function (fixed) {
+				this.cpreview.set_fixed(fixed);
+			},
+			set_window: function (x, y, width, height, fixed) {
+				this.cpreview.set_window(x, y, width, height, fixed);
+			},
+			set_zoom: function (zoom, fit, large, axis) {
+				// Update fit
+				if (fit !== undefined) {
+					this.fit = fit;
+					this.fit_large = large;
+				}
+
+				// Detect scale
+				if (axis !== undefined) this.fit_axis = axis;
+				var scale = 1.0;
+				if (this.fit) {
+					scale = (this.fit_axis == 0) ?
+						(this.cpreview.display.width / this.size.width) :
+						(this.cpreview.display.height / this.size.height);
+				}
+
+				// Set zoom
+				if (zoom !== undefined) {
+					this.zoom = zoom;
+				}
+
+				scale *= this.zoom;
+				this.cpreview.set_size(this.size.width * scale, this.size.height  * scale);
+			},
+			set_size: function (width, height, acquired) {
+				this.size.width = width;
+				this.size.height = height;
+				if (acquired === true || acquired === false) this.size.acquired = acquired;
+			},
+			set_offset: function (x, y) {
+				this.cpreview.set_offset(x, y);
+			},
+			set_paddings: function (top, right, bottom, left) {
+				this.cpreview.set_paddings(top, right, bottom, left);
+			},
+			clear_size: function () {
+				this.cpreview.clear_size();
+			},
+			clear_paddings: function () {
+				this.cpreview.clear_paddings();
+			},
+
+			video_interacted: function () {
+				return (this.nodes_video !== null && this.nodes_video.interacted);
+			},
+			clear_video_interactions: function () {
+				if (this.nodes_video !== null) this.nodes_video.interacted = false;
+			},
+
+			set_video_muted: function (muted) {
+				if (this.nodes_video === null) return;
+
+				// Apply
+				this.nodes_video.video.muted = muted;
+
+				// Change icon
+				if (muted) style.add_class_svg(this.nodes_video.svg_volume, "iex_svg_volume_button_muted");
+				else style.remove_class_svg(this.nodes_video.svg_volume, "iex_svg_volume_button_muted");
+
+				// Interacted
+				this.nodes_video.interacted = true;
+			},
+			set_video_volume: function (volume) {
+				if (this.nodes_video === null) return;
+
+				set_video_volume.call(this, volume, "set", true);
+			},
+			set_video_paused: function (paused, loop) {
+				if (this.nodes_video === null) return;
+
+				var video = this.nodes_video.video;
+
+				// Loop
+				if (loop === true || loop === false) {
+					video.loop = loop;
+				}
+
+				// Pause or play
+				if (paused) video.pause();
+				else video.play();
+
+				// Interacted
+				this.nodes_video.interacted = true;
+
+				// Update buttons
+				update_video_play_status.call(this, paused);
+			},
+
+			is_visible: function () {
+				return this.cpreview.visible;
+			},
+
+			get_inner_rect: function () {
+				return style.get_object_rect(this.cpreview.nodes.overflow);
+			},
+			get_window: function () {
+				return this.cpreview.display;
+			},
+
+			add_event_listener: function (node, event, callback, capture) {
+				node.addEventListener(event, callback, capture);
+				this.event_listeners.push([node, event, callback, capture]);
+			},
+			remove_event_listener: function (node, event, callback, capture, remove) {
+				node.removeEventListener(event, callback, capture);
+				if (remove) {
+					for (var i = 0, j = this.event_listeners.length; i < j; ++i) {
+						if (
+							this.event_listeners[i][0] === event &&
+							this.event_listeners[i][1] === callback &&
+							this.event_listeners[i][2] === capture
+						) {
+							this.event_listeners.splice(i, 1);
+							return;
+						}
+					}
+				}
+			},
+
+			set_vcontrols_mini_visible: function (visible) {
+				if (this.nodes_video === null) return;
+
+				if (visible) style.add_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_mini");
+				else style.remove_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_mini");
+			},
+			set_vcontrols_borders_rounded: function (rounded) {
+				this.style.vcontrols_rounded = rounded;
+				if (this.nodes_video === null) return;
+
+				if (rounded) {
+					style.remove_class(this.nodes_video.volume_bar, "iex_mpreview_vcontrols_no_border_radius");
+					style.remove_class(this.nodes_video.seek_bar, "iex_mpreview_vcontrols_no_border_radius");
+				}
+				else {
+					style.add_class(this.nodes_video.volume_bar, "iex_mpreview_vcontrols_no_border_radius");
+					style.add_class(this.nodes_video.seek_bar, "iex_mpreview_vcontrols_no_border_radius");
+				}
+			},
+
+			clear_stats: function () {
+				this.set_stat_zoom(false);
+				this.set_stat_status(false);
+				this.set_stat_resolution(false);
+				this.set_stat_file_size(false);
+				this.set_stat_file_name(false);
+			},
+			set_stat_zoom: function (visible, text, text_fit) {
+				if (visible === false) {
+					style.remove_class(this.nodes.stat_zoom_container, "iex_mpreview_stat_visible");
+					update_stat_sep_visibility.call(this, this.nodes.stat_zoom_container, false);
+					this.nodes.stat_zoom.textContent = "";
+					this.nodes.stat_zoom_fit.textContent = "";
+				}
+				else {
+					if (visible) {
+						style.add_class(this.nodes.stat_zoom_container, "iex_mpreview_stat_visible");
+						update_stat_sep_visibility.call(this, this.nodes.stat_zoom_container, true);
+					}
+					this.nodes.stat_zoom.textContent = text;
+					this.nodes.stat_zoom_fit.textContent = text_fit;
+				}
+			},
+			set_stat_status: function (visible, text, type) {
+				if (visible === false) {
+					style.remove_classes(this.nodes.stat_status, "iex_mpreview_stat_visible iex_mpreview_stat_red");
+					update_stat_sep_visibility.call(this, this.nodes.stat_status, false);
+					this.nodes.stat_status.textContent = "";
+				}
+				else {
+					if (visible) {
+						style.add_class(this.nodes.stat_status, "iex_mpreview_stat_visible");
+						update_stat_sep_visibility.call(this, this.nodes.stat_status, true);
+					}
+					if (type == "error") {
+						style.add_class(this.nodes.stat_status, "iex_mpreview_stat_red");
+					}
+					else {
+						style.remove_class(this.nodes.stat_status, "iex_mpreview_stat_red");
+					}
+					this.nodes.stat_status.textContent = text;
+				}
+			},
+			set_stat_resolution: function (visible, text) {
+				if (visible === false) {
+					style.remove_class(this.nodes.stat_resolution, "iex_mpreview_stat_visible");
+					update_stat_sep_visibility.call(this, this.nodes.stat_resolution, false);
+					this.nodes.stat_resolution.textContent = "";
+				}
+				else {
+					if (visible) {
+						style.add_class(this.nodes.stat_resolution, "iex_mpreview_stat_visible");
+						update_stat_sep_visibility.call(this, this.nodes.stat_resolution, true);
+					}
+					this.nodes.stat_resolution.textContent = text;
+				}
+			},
+			set_stat_file_size: function (visible, text) {
+				if (visible === false) {
+					style.remove_class(this.nodes.stat_filesize, "iex_mpreview_stat_visible");
+					update_stat_sep_visibility.call(this, this.nodes.stat_filesize, false);
+					this.nodes.stat_filesize.textContent = "";
+				}
+				else {
+					if (visible) {
+						style.add_class(this.nodes.stat_filesize, "iex_mpreview_stat_visible");
+						update_stat_sep_visibility.call(this, this.nodes.stat_filesize, true);
+					}
+					this.nodes.stat_filesize.textContent = text;
+				}
+			},
+			set_stat_file_name: function (visible, text) {
+				if (visible === false) {
+					style.remove_class(this.nodes.stat_filename, "iex_mpreview_stat_visible");
+					update_stat_sep_visibility.call(this, this.nodes.stat_filename, false);
+					this.nodes.stat_filename.textContent = "";
+				}
+				else {
+					if (visible) {
+						style.add_class(this.nodes.stat_filename, "iex_mpreview_stat_visible");
+						update_stat_sep_visibility.call(this, this.nodes.stat_filename, true);
+					}
+					this.nodes.stat_filename.textContent = text;
+				}
+			},
+
+			set_zoom_control_buttons_enabled: function (enabled) {
+				if (this.nodes === null) return;
+
+				this.nodes.stats_zoom_controls_enabled = enabled;
+			},
+
+		};
+
+
+
+		return MediaPreview;
+
+	})();
+
+	// Content preview base
+	var ContentPreview = (function () {
+
+		var ContentPreviewNodes = function () {
+			var theme = style.theme;
+
+			// Main container
+			this.container = document.createElement("div");
+			this.container.className = "iex_cpreview_container iex_cpreview_container_visible" + theme;
+
+			// Position/padding container
+			this.padding = document.createElement("div");
+			this.padding.className = "iex_cpreview_padding" + theme;
+			this.container.appendChild(this.padding);
+
+			// Overflow container
+			this.overflow = document.createElement("div");
+			this.overflow.className = "iex_cpreview_overflow" + theme;
+			this.padding.appendChild(this.overflow);
+
+			// Offset container
+			this.offset = document.createElement("div");
+			this.offset.className = "iex_cpreview_offset" + theme;
+			this.overflow.appendChild(this.offset);
+		};
+
+
+
+		var ContentPreview = function () {
+			this.nodes = new ContentPreviewNodes();
+
+			this.visible = true;
+
+			this.offset_x = 0;
+			this.offset_y = 0;
+
+			this.size = {
+				width: 0,
+				height: 0,
+			};
+			this.display = {
+				x: 0,
+				y: 0,
+				width: 0,
+				height: 0,
+			};
+
+			this.fixed = false;
+		};
+
+
+
+		ContentPreview.prototype = {
+			constructor: ContentPreview,
+
+			set_visible: function (visible) {
+				// Add or remove visibility
+				this.visible = visible;
+				if (visible) style.add_class(this.nodes.container, "iex_cpreview_container_visible");
+				else style.remove_class(this.nodes.container, "iex_cpreview_container_visible");
+			},
+			set_fixed: function (fixed) {
+				// No change
+				if (this.fixed == fixed) return;
+
+				var container = this.nodes.container,
+					doc_offset = style.get_document_offset();
+
+				// Fixed position
+				this.fixed = fixed;
+				if (this.fixed) {
+					this.display.x -= doc_offset.left;
+					this.display.y -= doc_offset.top;
+					style.add_class(container, "iex_cpreview_container_fixed");
+				}
+				else {
+					this.display.x += doc_offset.left;
+					this.display.y += doc_offset.top;
+					style.remove_class(container, "iex_cpreview_container_fixed");
+				}
+
+				// Position
+				container.style.left = this.display.x.toFixed(2) + "px";
+				container.style.top = this.display.y.toFixed(2) + "px";
+			},
+			set_window: function (x, y, width, height, fixed) {
+				var container = this.nodes.container,
+					overflow = this.nodes.overflow;
+
+				// Fixed position
+				if (fixed !== undefined) {
+					this.fixed = fixed;
+					if (fixed) style.add_class(this.nodes.container, "iex_cpreview_container_fixed");
+					else style.remove_class(this.nodes.container, "iex_cpreview_container_fixed");
+				}
+
+				// Position
+				container.style.left = x.toFixed(2) + "px";
+				container.style.top = y.toFixed(2) + "px";
+
+				// Size
+				overflow.style.width = width.toFixed(2) + "px";
+				overflow.style.height = height.toFixed(2) + "px";
+
+				// Set
+				this.display.x = x;
+				this.display.y = y;
+				this.display.width = width;
+				this.display.height = height;
+			},
+			set_size: function (width, height, offset_x, offset_y) {
+				var offset = this.nodes.offset,
+					w_diff = width - this.display.width,
+					h_diff = height - this.display.height;
+
+				// Bound
+				if (w_diff < 0) w_diff = 0;
+				if (h_diff < 0) h_diff = 0;
+
+				// Set size
+				this.size.width = width;
+				this.size.height = height;
+
+				// Set offset
+				if (offset_x !== undefined && offset_y !== undefined) {
+					this.offset_x = offset_x;
+					this.offset_y = offset_y;
+				}
+
+				// Set visible size
+				offset.style.width = width.toFixed(2) + "px";
+				offset.style.height = height.toFixed(2) + "px";
+
+				// Set visible offset
+				offset.style.left = (w_diff * -this.offset_x).toFixed(2) + "px";
+				offset.style.top = (h_diff * -this.offset_y).toFixed(2) + "px";
+			},
+			set_offset: function (x, y) {
+				var offset = this.nodes.offset,
+					w_diff = this.size.width - this.display.width,
+					h_diff = this.size.height - this.display.height;
+
+				// Bound
+				if (w_diff < 0) w_diff = 0;
+				if (h_diff < 0) h_diff = 0;
+
+				// Set offset
+				this.offset_x = x;
+				this.offset_y = y;
+
+				// Set visible offset
+				offset.style.left = (w_diff * -x).toFixed(2) + "px";
+				offset.style.top = (h_diff * -y).toFixed(2) + "px";
+			},
+			set_paddings: function (top, right, bottom, left) {
+				// Set paddings
+				this.nodes.padding.style.top = (-top).toFixed(2) + "px";
+				this.nodes.padding.style.left = (-left).toFixed(2) + "px";
+				this.nodes.padding.style.padding = top.toFixed(2) + "px " + right.toFixed(2) + "px " + bottom.toFixed(2) + "px " + left.toFixed(2) + "px";
+			},
+
+			clear_size: function () {
+				this.nodes.offset.style.width = "";
+				this.nodes.offset.style.height = "";
+
+				this.size.width = 0;
+				this.size.height = 0;
+			},
+			clear_paddings: function () {
+				// Clear paddings
+				this.nodes.padding.style.top = "";
+				this.nodes.padding.style.left = "";
+				this.nodes.padding.style.padding = "";
+			},
+
+			add_to: function (parent) {
+				parent.appendChild(this.nodes.container);
+			},
+			remove: function () {
+				var par = this.nodes.container.parentNode;
+				if (par) par.removeChild(this.nodes.container);
+			},
+			add_content: function (node) {
+				// Add to offset
+				style.add_class(node, "iex_cpreview_content");
+				this.nodes.offset.appendChild(node);
+			},
+			add_overlay: function (node, outside) {
+				// Add to overflow or padding
+				style.add_class(node, "iex_cpreview_overlay");
+				(outside ? this.nodes.padding : this.nodes.overflow).appendChild(node);
+			},
+
+		};
+
+
+
+		return ContentPreview;
 
 	})();
 
@@ -7429,11 +8131,38 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 	settings = new Settings();
 	// Hotkey manager
 	hotkey_manager = new HotkeyManager();
-	// Create image hover manager
-	image_hover = new ImageHover();
-	settings.on_ready(image_hover.start.bind(image_hover));
+
+	// Execute once page type is detected
+	api.on("page_type_detected", function (event) {
+		if (event.page_type == "board" || event.page_type == "thread" || event.page_type == "catalog") {
+			// Insert stylesheet
+			style.insert_stylesheet();
+
+			// Create image hover manager
+			image_hover = new ImageHover();
+			settings.on_ready(image_hover.start.bind(image_hover));
+		}
+	});
 
 })();
 
+
+
+/*
+var init_interval = setInterval(function () {
+	var head;
+	if ((document.readyState == "interactive" || document.readyState == "complete") && (head = document.querySelector("head"))) {
+		var e = document.createElement("script");
+		e.innerHTML = "(" + main.toString() + ")();";
+		head.appendChild(e);
+		head.removeChild(e);
+		clearInterval(init_interval);
+	}
+}, 50);
+
+
+
+})();
+*/
 
 
