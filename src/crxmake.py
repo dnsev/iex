@@ -41,14 +41,17 @@ def main():
 	# Usage
 	if (len(sys.argv) < 5):
 		print "Usage:"
-		print "  " + sys.argv[0] + " crx_dir input_userscript.js target_userscript_name.js manifest.json";
+		print "  " + sys.argv[0] + " crx_dir input_userscript.js target_userscript_name.js manifest.json manifest_filename.json updates_base.xml updates.xml";
 		return -1;
 
-	crxdir = sys.argv[1];
+	crxdir = os.path.abspath(sys.argv[1]);
 	input = sys.argv[2];
 	target_input = sys.argv[3];
 	manifest = sys.argv[4];
-	flags = sys.argv[5:];
+	manifest_filename = os.path.split(sys.argv[5])[1];
+	updates_file = sys.argv[6];
+	updates_file_target = sys.argv[7];
+	flags = sys.argv[8:];
 
 	# Read input
 	f = open(input, "rb");
@@ -64,6 +67,11 @@ def main():
 	manifest_source = f.read();
 	f.close();
 
+	# Get manifest
+	f = open(updates_file, "rb");
+	updates_file_source = f.read();
+	f.close();
+
 
 	# Write icon
 	icon_filename = "",
@@ -77,15 +85,15 @@ def main():
 		if (icon_ext in ext_replacements): icon_ext = ext_replacements[icon_ext];
 		icon_filename = "icon16." + icon_ext;
 
-		f = open(os.path.join(os.path.abspath(crxdir), icon_filename), "wb");
+		f = open(os.path.join(crxdir, icon_filename), "wb");
 		f.write(base64.b64decode(m.group(2)));
 		f.close();
 
 
 	# Write script
 	print input;
-	print os.path.join(os.path.abspath(crxdir), os.path.split(target_input)[1]);
-	shutil.copy(input, os.path.join(os.path.abspath(crxdir), os.path.split(target_input)[1]));
+	print os.path.join(crxdir, os.path.split(target_input)[1]);
+	shutil.copy(input, os.path.join(crxdir, os.path.split(target_input)[1]));
 
 
 	# Manifest data
@@ -103,9 +111,17 @@ def main():
 	# Write manifest
 	replace_pattern = re.compile(r"\<\<(?:(.+?)\:)?([^\>]+)\>\>");
 	manifest_source = replace_pattern.sub(lambda m: manifest_replace(data, m), manifest_source);
-	f = open(os.path.join(os.path.abspath(crxdir), "manifest.json"), "wb");
+	f = open(os.path.join(crxdir, manifest_filename), "wb");
 	f.write(manifest_source);
 	f.close();
+
+	# Write
+	replace_pattern = re.compile(r"\{\{(?:(.+?)\:)?([^\}]+)\}\}");
+	updates_file_source = replace_pattern.sub(lambda m: manifest_replace(data, m), updates_file_source);
+	f = open(updates_file_target, "wb");
+	f.write(updates_file_source);
+	f.close();
+
 
 	# Done
 	return 0;

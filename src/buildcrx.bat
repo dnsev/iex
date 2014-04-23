@@ -8,7 +8,7 @@ set target_dir="%base_dir%iex"
 mkdir iex > nul 2> nul
 
 :: Create
-crxmake.py %target_dir% ..\builds\iex.user.js iex.user.js manifest.json -noicon
+crxmake.py %target_dir% ..\builds\iex.user.js iex.user.js manifest.json manifest.json updates_base.xml ..\builds\updates.xml -noicon
 
 :: Copy icons
 ico.py icons %target_dir%
