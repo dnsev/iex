@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.2
+// @version     2.3
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -35,7 +35,7 @@ var main =
 	var is_firefox = (navigator.userAgent.toString().indexOf("Firefox") >= 0);
 	var is_chrome = (navigator.userAgent.toString().indexOf(" Chrome/") >= 0);
 	var is_opera = !is_firefox && !is_chrome && !(navigator.userAgent.toString().indexOf("MSIE") >= 0);
-	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.2","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
+	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.3","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
 
 	// Error logging
 	var log_error = function (error_string) {
@@ -79,7 +79,15 @@ var main =
 
 
 	// Instances
-	var api = null, settings = null, sync = null, style = null, image_hover = null, hotkey_manager = null;
+	var api = null,
+		settings = null,
+		sync = null,
+		style = null,
+		hotkey_manager = null,
+		hover = null,
+		image_hover = null,
+		file_link = null,
+		file_view = null;
 
 
 
@@ -1607,10 +1615,10 @@ var main =
 			post_get_file_info: function (post_container) {
 				// Setup info
 				var info = {
-					image: "",
+					url: "",
 					thumb: null,
 					spoiler: null,
-					filename: "",
+					name: "",
 					resolution: {
 						width: 0,
 						height: 0
@@ -1633,8 +1641,8 @@ var main =
 					if ((n_p = n_file.querySelector(".file-info"))) {
 						// 4chan-x
 						if ((n = n_p.querySelector("a"))) {
-							info.image = n.getAttribute("href") || "";
-							info.filename = n.textContent.trim();
+							info.url = n.getAttribute("href") || "";
+							info.name = n.textContent.trim();
 						}
 						if ((n = n_p.lastChild)) {
 							m = /([0-9\.]+)\s*(\w?b),(?:\s*([0-9]+)x([0-9]+))?/i.exec((n.textContent || ""));
@@ -1651,10 +1659,10 @@ var main =
 					else if ((n_p = n_file.querySelector(".fileText"))) {
 						// Vanilla
 						if ((n = n_p.querySelector("a"))) {
-							info.image = n.getAttribute("href") || "";
+							info.url = n.getAttribute("href") || "";
 
 							// File name
-							info.filename = n_p.getAttribute("title") || n.getAttribute("title") || n.textContent || "";
+							info.name = n_p.getAttribute("title") || n.getAttribute("title") || n.textContent || "";
 
 							// Attributes
 							if ((n = n.nextSibling)) {
@@ -1678,7 +1686,9 @@ var main =
 							if (style.has_class(n_p, "imgspoiler")) {
 								info.spoiler = m;
 								// Assume thumbnail
-								info.thumb = info.image.replace(/\/\/(.*)i\.4cdn\.org/g, "//t.4cdn.org").replace(/\.([^\.]*)$/, "s.jpg");
+								if (info.url) {
+									info.thumb = info.url.replace(/\/\/(.*)i\.4cdn\.org/g, "//t.4cdn.org").replace(/\.([^\.]*)$/, "s.jpg");
+								}
 							}
 							else {
 								info.thumb = m;
@@ -1750,6 +1760,38 @@ var main =
 				n = image_container;
 				while ((n = n.parentNode) && !style.has_class(n, "postContainer"));
 				return n;
+			},
+			post_get_file_nodes: function (post_container) {
+				var post = post_container.querySelector(".post"),
+					nodes, node;
+
+				if (post !== null) {
+					// File info container
+					if ((node = post.firstChild)) {
+						while (true) {
+							// File container
+							if (style.has_class(node, "file")) {
+								nodes = {
+									container: node,
+									info_container: node.querySelector(".fileText,.file-info"),
+									link_thumbnail: node.querySelector(".fileThumb"),
+									link: null,
+								};
+
+								if (nodes.info_container !== null) {
+									nodes.link = node.querySelector("a");
+								}
+
+								return nodes;
+							}
+
+							// Next
+							if (!(node = node.nextSibling)) break;
+						}
+					}
+				}
+
+				return null;
 			},
 
 			get_header_rect: function () {
@@ -2057,7 +2099,10 @@ var main =
 						"animations_background": true,
 						"controls_rounded_border": true
 					}
-				}
+				},
+				"file_linkification": {
+					"enabled": true,
+				},
 			};
 			this.save_key = "iex_settings";
 
@@ -3362,6 +3407,18 @@ var main =
 				type: "checkbox",
 				values: [ false , true ],
 				value_labels: [ "don't mute" , "mute" ],
+			});
+
+			// Link settings
+			descriptors.push({
+				level: "normal",
+				section: "Linkification",
+				tree: [ "file_linkification" , "enabled" ],
+				label: "Named File URLs",
+				description: "Appends the filename to the url as a #fragment (for semantic purposes)",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "disabled" , "enabled" ],
 			});
 
 			// Style settings
@@ -5167,10 +5224,193 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 	})();
 
+	// Class to re-linkify file links
+	var FileLink = (function () {
+
+		var FileLink = function () {
+			// Enabled
+			this.enabled = false;
+			this.disabled = false;
+			this.post_queue = null;
+
+			// Binds
+			this.on_api_post_add_bind = on_api_post_add.bind(this);
+			this.on_api_post_remove_bind = on_api_post_remove.bind(this);
+		};
+
+
+
+		var modify_post_container = function (post_container) {
+			// Find file
+			var file_nodes = api.post_get_file_nodes(post_container),
+				file_info, href;
+
+			if (
+				file_nodes &&
+				(file_info = api.post_get_file_info(post_container)).name
+			) {
+				// Modify hrefs
+				if (file_nodes.link !== null) {
+					modify_href.call(this, file_nodes.link, file_info.name);
+				}
+				if (file_nodes.link_thumbnail !== null) {
+					modify_href.call(this, file_nodes.link_thumbnail, file_info.name);
+				}
+			}
+		};
+		var modify_href = function (node, filename) {
+			var href = node.getAttribute("href");
+			if (href != null) {
+				href = href.replace(/#.*/, "") + "#!" + this.escape(filename);
+				node.setAttribute("href", href);
+			}
+		};
+
+		var on_api_post_add = function (post_container) {
+			// Queue add hooks
+			this.post_queue.push(post_container);
+		};
+		var on_api_post_remove = function (post_container) {
+			// Nothing
+		};
+
+		var on_post_queue_callback = function (post_container) {
+			// Add hooks
+			modify_post_container.call(this, post_container);
+		};
+
+
+
+		FileLink.prototype = {
+			constructor: FileLink,
+
+			destroy: function () {
+				// Remove api events
+				api.off("post_add", this.on_api_post_add_bind);
+				api.off("post_remove", this.on_api_post_remove_bind);
+			},
+
+			start: function () {
+				// Enable if settings allow it
+				if (settings.values["file_linkification"]["enabled"]) {
+					this.enable();
+				}
+			},
+			enable: function () {
+				// Enable
+				if (this.enabled) return;
+				this.enabled = true;
+
+				// Get posts
+				this.post_queue = Delay.queue(api.get("posts"), on_post_queue_callback.bind(this), 50, 0.25);
+
+				// Bind post acquiring
+				api.on("post_add", this.on_api_post_add_bind);
+				api.on("post_remove", this.on_api_post_remove_bind);
+			},
+			disable: function () {
+				// Not enabled or already disabled
+				if (!this.enabled || this.disabled) return;
+
+				// Disable
+				this.disabled = true;
+			},
+
+			escape: function (s) {
+				return encodeURIComponent(s).replace(/\%20/g, "+");
+			},
+			unescape: function (s) {
+				return decodeURIComponent(s.replace(/\+/g, "%20"));
+			},
+
+		};
+
+
+
+		return FileLink;
+
+	})();
+
+	// Class to manage files in a separate window
+	var FileView = (function () {
+
+		var FileView = function () {
+		};
+
+
+
+		FileView.prototype = {
+			constructor: FileView,
+
+			start: function () {
+				// Auto-loop .webm's
+				var video = document.body.querySelector("video");
+
+				if (video) video.loop = true;
+			},
+		};
+
+
+
+		return FileView;
+
+	})();
+
+	// Hover container control
+	var Hover = (function () {
+
+		var Hover = function () {
+			this.container = null;
+		};
+
+
+
+		var on_asap = function () {
+			var body = document.querySelector("body"),
+				theme = style.theme;
+
+			// Parent
+			if (body) {
+				// Create floating container
+				this.container = document.createElement("div");
+				this.container.className = "iex_floating_container" + theme;
+
+				// Append
+				body.appendChild(this.container);
+			}
+		};
+		var on_asap_condition = function () {
+			return document.querySelector("body");
+		};
+
+
+
+		Hover.prototype = {
+			constructor: Hover,
+
+			destroy: function () {
+				// Remove container
+				var par = this.container.parentNode;
+				if (par) par.removeChild(this.container);
+			},
+
+			start: function () {
+				// Setup
+				ASAP.asap(on_asap.bind(this), on_asap_condition);
+			},
+
+		};
+
+
+
+		return Hover;
+
+	})();
+
 	// Image hover control
 	var ImageHover = (function () {
 
-		var ImageHover = function () {
+		var ImageHover = function (hover) {
 			// Preview object
 			this.mpreview = null;
 
@@ -5178,6 +5418,9 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			this.enabled = false;
 			this.disabled = false;
 			this.current_image_container = null;
+
+			// Post queue
+			this.post_queue = null;
 
 			// Extension settings
 			this.extensions_valid = {
@@ -5209,7 +5452,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			};
 
 			// Parent node
-			this.floating_container = null;
+			this.hover = hover;
 			this.connector = null;
 
 			// Open and closing timers
@@ -5335,9 +5578,6 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					animations_background: true,
 				},
 			};
-
-			// Setup
-			ASAP.asap(on_asap.bind(this), on_asap_condition);
 		};
 
 
@@ -5377,7 +5617,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			// Get info
 			if (post_container === null) post_container = api.post_get_post_container_from_image_container(image_container);
 			var post_info = api.post_get_file_info(post_container);
-			if (!post_info.image) return;
+			if (!post_info.url) return;
 
 			// Don't open if expanded
 			if (api.post_is_image_expanded_or_expanding(post_container)) return;
@@ -5387,7 +5627,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			if (!val_check["enabled"]) return;
 
 			// Extension check
-			var ext = /\.[^\.]+$/.exec(post_info.image);
+			var ext = /\.[^\.]+$/.exec(post_info.url);
 			ext = ext ? ext[0].toLowerCase() : "";
 			if (!(ext in this.extensions_valid)) return;
 
@@ -5439,7 +5679,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			window.addEventListener("scroll", this.on_window_scroll_bind, false);
 
 			// Add
-			this.mpreview.add_to(this.floating_container);
+			this.mpreview.add_to(this.hover.container);
 		};
 		var preview_detach = function (destroy) {
 			if (this.mpreview === null) return;
@@ -5660,20 +5900,13 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 			// Parent
 			if (body) {
-				// Create floating container
-				this.floating_container = document.createElement("div");
-				this.floating_container.className = "iex_floating_container" + theme;
-
 				// Create connector
 				this.connector = document.createElement("div");
 				this.connector.className = "iex_floating_image_connector" + theme;
 				this.connector.addEventListener("mouseover", this.on_image_connector_mouseenter_bind, false);
 				this.connector.addEventListener("mouseout", this.on_image_connector_mouseleave_bind, false);
 				this.connector.addEventListener("mousedown", this.on_image_connector_mousedown_bind, false);
-				this.floating_container.appendChild(this.connector);
-
-				// Append
-				body.appendChild(this.floating_container);
+				this.hover.container.appendChild(this.connector);
 			}
 		};
 		var on_asap_condition = function () {
@@ -5928,12 +6161,6 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					par.removeChild(this.connector);
 				}
 
-				// Remove floating container
-				par = this.floating_container.parentNode;
-				if (par) {
-					par.removeChild(this.floating_container);
-				}
-
 				// Remove hotkeys
 				if (this.hotkeys !== null) {
 					for (var i = 0; i < this.hotkeys.length; ++i) {
@@ -5977,6 +6204,9 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				// Enable
 				if (this.enabled) return;
 				this.enabled = true;
+
+				// Setup nodes
+				ASAP.asap(on_asap.bind(this), on_asap_condition);
 
 				// Get posts
 				this.post_queue = Delay.queue(api.get("posts"), on_post_queue_callback.bind(this), 50, 0.25);
@@ -6031,14 +6261,14 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				}
 
 				// Expansion type
-				ext = /\.[^\.]+$/.exec(post_info.image);
+				ext = /\.[^\.]+$/.exec(post_info.url);
 				ext = ext ? ext[0].toLowerCase() : "";
 				ext_info = this.extensions_valid[ext];
 				ext_bg_show = settings.values.image_expansion.extensions[ext_info.ext].background;
 
 				if (ext_info.type == "video") {
 					// Set video
-					this.mpreview.set_video(post_info.image);
+					this.mpreview.set_video(post_info.url);
 
 					// Playback settings
 					this.mpreview.set_video_muted(v_set.mute_initially);
@@ -6047,7 +6277,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 					this.mpreview.clear_video_interactions();
 				}
 				else {
-					this.mpreview.set_image(post_info.image);
+					this.mpreview.set_image(post_info.url);
 				}
 
 				// Background
@@ -6064,8 +6294,8 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				}
 
 				// Stats
-				if (post_info.filename) {
-					this.mpreview.set_stat_file_name((display_stats == 0), post_info.filename);
+				if (post_info.name) {
+					this.mpreview.set_stat_file_name((display_stats == 0), post_info.name);
 				}
 				this.mpreview.set_stat_file_size((display_stats == 0), post_info.size + post_info.size_label);
 
@@ -8168,15 +8398,22 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			// Insert stylesheet
 			style.insert_stylesheet();
 
-			// Create image hover manager
-			image_hover = new ImageHover();
-			settings.on_ready(image_hover.start.bind(image_hover));
-		}
-		else if (event.page_type == "video") {
-			// Auto-loop .webm's
-			var video = document.body.querySelector("video");
+			// Create new hover
+			hover = new Hover();
+			hover.start();
 
-			if (video) video.loop = true;
+			// Create image hover manager
+			image_hover = new ImageHover(hover);
+			settings.on_ready(image_hover.start.bind(image_hover));
+
+			// Create image link modifier
+			file_link = new FileLink();
+			settings.on_ready(file_link.start.bind(file_link));
+		}
+		else if (event.page_type == "image" || event.page_type == "video") {
+			// File view
+			file_view = new FileView();
+			file_view.start();
 		}
 	});
 	api.setup();
