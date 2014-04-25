@@ -2,10 +2,11 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.3
+// @version     2.4
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
+// @grant       GM_listValues
 // @run-at      document-start
 // @icon        data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==
 // @include     http://boards.4chan.org/*
@@ -462,44 +463,212 @@ var main =
 
 	})();
 
-	// Module to manage data saving
-	var Save = (function () {
+	// Module to manage data saving with an asynchronous paradigm
+	var SaveAsync = (function () {
 
-		// Acquire functions
-		var w_set_value = window.localStorage.setItem.bind(window.localStorage);
-		var w_get_value = window.localStorage.getItem.bind(window.localStorage);
-		var w_del_value = window.localStorage.removeItem.bind(window.localStorage);
-		var set_value = w_set_value;
-		var get_value = w_get_value;
-		var del_value = w_del_value;
-		var using_localstorage = true;
+		// Storage type
+		var using_localstorage = true,
+			chrome_storage = null;
+
+		// Check for chrome storage
 		try {
-			if (GM_setValue && GM_getValue && GM_deleteValue) {
-				set_value = GM_setValue;
-				get_value = GM_getValue;
-				del_value = GM_deleteValue;
+			chrome_storage = chrome.storage.local || null;
+		}
+		catch (e) {
+			chrome_storage = null;
+		}
+
+		// Check for GM storage
+		try {
+			if (GM_setValue && GM_getValue && GM_deleteValue && GM_listValues) {
 				using_localstorage = false;
 			}
 		}
 		catch (e) {
-			set_value = w_set_value;
-			get_value = w_get_value;
-			del_value = w_del_value;
+			using_localstorage = true;
 		}
 
-		// Return functions
+
+
+		// HTML5 storage
+		var decode_value = function (value) {
+				if (value) {
+					try {
+						return JSON.parse(value);
+					}
+					catch (e) {}
+				}
+				return value;
+			},
+			object_byte_size = function (obj) {
+				// Calculate byte length
+				obj = JSON.stringify(obj);
+				try {
+					// Encode in utf-8
+					return unescape(encodeURIComponent(obj)).length;
+				}
+				catch (e) {
+					return obj.length;
+				}
+			},
+
+			generic_get_value = function (key, callback) {
+				var val = this.getItem(key, null);
+				callback.call(null, decode_value(val));
+			},
+			generic_set_value = function (key, value, callback) {
+				this.setItem(key, JSON.stringify(value));
+				if (callback) callback.call(null);
+			},
+			generic_del_value = function (key, callback) {
+				this.removeItem(key);
+				if (callback) callback.call(null);
+			},
+			generic_get_keys = function (callback) {
+				var keys = [],
+					key;
+
+				for (key in this) {
+					keys.push(key);
+				}
+
+				callback.call(null, keys);
+			},
+			generic_get_space_used = function (callback) {
+				var size = 0,
+					key;
+
+				// Create representation
+				for (key in this) {
+					size += object_byte_size(key) + object_byte_size(decode_value(this.getItem(key, null)));
+				}
+
+				// Return
+				callback.call(null, size);
+			},
+
+			w_get_value = generic_get_value.bind(window.localStorage),
+			w_set_value = generic_set_value.bind(window.localStorage),
+			w_del_value = generic_del_value.bind(window.localStorage),
+			w_get_keys = generic_get_keys.bind(window.localStorage),
+			w_get_space_used = generic_get_space_used.bind(window.localStorage),
+
+			s_get_value = generic_get_value.bind(window.sessionStorage),
+			s_set_value = generic_set_value.bind(window.sessionStorage),
+			s_del_value = generic_del_value.bind(window.sessionStorage),
+			s_get_keys = generic_get_keys.bind(window.sessionStorage),
+			s_get_space_used = generic_get_space_used.bind(window.sessionStorage),
+
+			get_value, set_value, del_value, get_keys, get_space_used;
+
+
+
+		// Userscript storage
+		if (chrome_storage) {
+			// Chrome storage
+			var get_keys_callback = function (next_callback, obj) {
+				var keys = [],
+					key;
+
+				for (key in obj) {
+					keys.push(key);
+				}
+
+				next_callback.call(null, keys);
+			};
+
+			var on_get = function (key, callback, value) {
+				callback.call(null, value[key]);
+			};
+
+			get_value = function (key, callback) {
+				this.get(key, on_get.bind(null, key, callback));
+			}.bind(chrome_storage);
+
+			set_value = function (key, value, callback) {
+				var obj = {};
+				obj[key] = value;
+
+				this.set(obj, callback);
+			}.bind(chrome_storage);
+
+			del_value = function (key, callback) {
+				this.remove(key, callback);
+			}.bind(chrome_storage);
+
+			get_keys = function (callback) {
+				this.get(null, get_keys_callback.bind(null, callback));
+			}.bind(chrome_storage);
+
+			get_space_used = function (callback) {
+				this.getBytesInUse(null, callback);
+			}.bind(chrome_storage);
+		}
+		else if (using_localstorage) {
+			// Local storage
+			get_value = w_get_value;
+			set_value = w_set_value;
+			del_value = w_del_value;
+			get_keys = w_get_keys;
+			get_space_used = w_get_space_used;
+		}
+		else {
+			// GM storage
+			get_value = function (key, callback) {
+				var val = GM_getValue(key, null);
+				callback.call(null, decode_value(val));
+			};
+			set_value = function (key, value, callback) {
+				GM_setValue(key, JSON.stringify(value));
+				if (callback) callback.call(null);
+			};
+			del_value = function (key, callback) {
+				GM_deleteValue(key);
+				if (callback) callback.call(null);
+			};
+			get_keys = function (callback) {
+				var keys = GM_listValues();
+				callback.call(null, keys);
+			};
+			get_space_used = function (callback) {
+				var keys = GM_listValues(),
+					size = 0,
+					i;
+
+				// Create representation
+				for (i = 0; i < keys.length; ++i) {
+					size += object_byte_size(keys[i]) + object_byte_size(decode_value(GM_getValue(keys[i], null)));
+				}
+
+				// Return
+				callback.call(null, size);
+			};
+		}
+
+
+
+		// Return function list
 		return {
 
-			set: set_value, // key, value
-			get: get_value, // key, default
-			del: del_value, // key
+			set: set_value, // key, value, callback()
+			get: get_value, // key, callback(value)
+			del: del_value, // key, callback()
+			keys: get_keys, // callback([...])
+			space_used: get_space_used, // callback(bytes)
+
 			w_set: w_set_value,
 			w_get: w_get_value,
 			w_del: w_del_value,
-			s_set: window.sessionStorage.setItem.bind(window.sessionStorage),
-			s_get: window.sessionStorage.getItem.bind(window.sessionStorage),
-			s_del: window.sessionStorage.removeItem.bind(window.sessionStorage),
-			is_using_localstorage: using_localstorage,
+			w_keys: w_get_keys,
+			w_space_used: w_get_space_used,
+
+			s_set: s_set_value,
+			s_get: s_get_value,
+			s_del: s_del_value,
+			s_keys: s_get_keys,
+			s_space_used: s_get_space_used,
+
+			mode: chrome_storage ? "chrome" : (using_localstorage ? "localstorage" : "gm"),
 
 		};
 
@@ -822,10 +991,10 @@ var main =
 		};
 
 		var on_document_observe = function (records) {
-			var i, j, nodes, r;
+			var i, r;
 
 			for (i = 0; i < records.length; ++i) {
-				var r = records[i];
+				r = records[i];
 
 				if (r.attributeName == "class") {
 					// Detect
@@ -2111,9 +2280,6 @@ var main =
 			// Value changing events
 			this.change_events = {};
 
-			// Load settings
-			this.load_values(false);
-
 			// Events
 			this.events = {
 			};
@@ -2306,7 +2472,16 @@ var main =
 			if (okay) {
 				this.change_value(["first_run"], false);
 				this.change_value(["image_expansion", "enabled"], true);
-				this.save_values();
+				this.save_values(on_first_run_install_callback_complete.bind(this, okay, settings_were_changed, status));
+			}
+			else {
+				// Instant
+				on_first_run_install_callback_complete.call(this, okay, settings_were_changed, status);
+			}
+		};
+		var on_first_run_install_callback_complete = function (okay, settings_were_changed, status) {
+			// Event
+			if (okay) {
 				sync.trigger("install_complete");
 			}
 
@@ -2356,11 +2531,16 @@ var main =
 			}
 		};
 
+		var on_initial_load = function () {
+			ASAP.asap(on_first_run_check.bind(this));
+		};
 		var on_first_run_check = function () {
 			// First run check
-			if (this.values["first_run"]) {
-				// Show message
-				this.display_first_run_notification();
+			if (api.page_type == "board" || api.page_type == "thread" || api.page_type == "catalog") {
+				if (this.values["first_run"]) {
+					// Show message
+					this.display_first_run_notification();
+				}
 			}
 
 			// Trigger ready
@@ -2418,7 +2598,7 @@ var main =
 		};
 		var on_settings_save_sync = function () {
 			// Reload settings
-			this.load_values(true);
+			this.load_values(true, null);
 		};
 		var on_image_expansion_enable_sync = function () {
 			// Image hover has been enabled in another tab; make it so this tab can't re-disable it
@@ -2585,8 +2765,9 @@ var main =
 		};
 		var on_iex_setting_delete_settings = function () {
 			// Delete
-			this.delete_values();
-
+			this.delete_values(on_iex_setting_delete_settings_complete.bind(this));
+		};
+		var on_iex_setting_delete_settings_complete = function () {
 			// Reload
 			this.settings_close();
 			window.location.reload(false);
@@ -2608,6 +2789,54 @@ var main =
 			this.settings_update_other_after_close = value_new;
 		};
 
+		var on_save_values_callback = function (next_callback) {
+			// Sync
+			sync.trigger("settings_save");
+
+			if (next_callback) {
+				next_callback.call(this);
+			}
+		};
+		var on_load_values_callback = function (events, next_callback, value) {
+			if (value) {
+				update_values.call(this, [], this.values, value, false, events);
+			}
+
+			if (next_callback) {
+				next_callback.call(this);
+			}
+		};
+		var on_display_settings_info_notification_callback = function (saved_values) {
+			// Get
+			try {
+				saved_values = JSON.stringify(saved_values, null, "    ");
+			}
+			catch (e) {}
+
+			// Alert message
+			var message = document.createElement("div"), m_part, m_link;
+
+			// Line 1
+			m_part = document.createElement("div");
+			m_part.className = "iex_spaced_div";
+			m_part.textContent = "These are iex's saved settings, which are useful for debugging purposes:";
+			message.appendChild(m_part);
+
+			// Textarea
+			m_part = document.createElement("textarea");
+			m_part.className = "iex_notification_textarea";
+			m_part.value = saved_values;
+			message.appendChild(m_part);
+
+			// Display
+			this.notification_install_fail = new Notification({
+				close: true,
+				overlay_close: true,
+				style: "success",
+				title: "Saved iex settings",
+				content: message,
+			});
+		};
 
 
 		var modify_settings_4chanx_display = function (container) {
@@ -2706,9 +2935,9 @@ var main =
 				inputs[i].checked = original.checked;
 			}
 		};
-		var modify_settings_vanilla_display = function (data) {
+		var modify_settings_vanilla_display = function (container) {
 			// Get the hover setting
-			var image_hover_setting = data.container.querySelector("input[data-option='imageHover']");
+			var image_hover_setting = container.querySelector("input[data-option='imageHover']");
 			if (!image_hover_setting) return;
 
 			// Acquire nodes to clone
@@ -3763,8 +3992,8 @@ var main =
 				api.on("settings_vanilla_open", this.on_settings_vanilla_open_bind = on_settings_vanilla_open.bind(this));
 				api.on("menu_4chanx_open", this.on_menu_4chanx_open_bind = on_menu_4chanx_open.bind(this));
 
-				// Script check
-				ASAP.asap(on_first_run_check.bind(this));
+				// First load
+				this.load_values(false, on_initial_load.bind(this));
 				ASAP.asap(on_insert_links.bind(this), on_insert_links_condition, 0.5);
 			},
 
@@ -3795,37 +4024,17 @@ var main =
 				// Return old
 				return old_value;
 			},
-			load_values: function (events) {
-				// Get
-				var new_values = Save.get(this.save_key, null);
-				if (new_values != null) {
-					// Load
-					try {
-						new_values = JSON.parse(new_values);
-					}
-					catch (e) {
-						new_values = null;
-					}
-
-					if (new_values != null) {
-						// Update
-						update_values.call(this, [], this.values, new_values, false, events);
-					}
-					// else, json fail
-				}
-				// else, not saved
+			load_values: function (events, complete_callback) {
+				// Async save
+				SaveAsync.get(this.save_key, on_load_values_callback.bind(this, events, complete_callback));
 			},
-			save_values: function () {
-				// Save
-				var json_str = JSON.stringify(this.values);
-				Save.set(this.save_key, json_str);
-
-				// Sync
-				sync.trigger("settings_save");
+			save_values: function (complete_callback) {
+				// Async save
+				SaveAsync.set(this.save_key, this.values, on_save_values_callback.bind(this, complete_callback));
 			},
-			delete_values: function () {
-				// Delete
-				Save.del(this.save_key);
+			delete_values: function (complete_callback) {
+				// Async delete
+				SaveAsync.del(this.save_key, complete_callback);
 			},
 
 			on: function (event, callback) {
@@ -4111,41 +4320,8 @@ var main =
 				});
 			},
 			display_settings_info_notification: function () {
-				// Get
-				var saved_values = Save.get(this.save_key, null);
-				if (saved_values === null) {
-					saved_values = "null";
-				}
-				else {
-					try {
-						saved_values = JSON.stringify(JSON.parse(saved_values), null, "    ");
-					}
-					catch (e) {}
-				}
-
-				// Alert message
-				var message = document.createElement("div"), m_part, m_link;
-
-				// Line 1
-				m_part = document.createElement("div");
-				m_part.className = "iex_spaced_div";
-				m_part.textContent = "These are iex's saved settings, which are useful for debugging purposes:";
-				message.appendChild(m_part);
-
-				// Textarea
-				m_part = document.createElement("textarea");
-				m_part.className = "iex_notification_textarea";
-				m_part.value = saved_values;
-				message.appendChild(m_part);
-
-				// Display
-				this.notification_install_fail = new Notification({
-					close: true,
-					overlay_close: true,
-					style: "success",
-					title: "Saved iex settings",
-					content: message,
-				});
+				// Async get
+				SaveAsync.get(this.save_key, on_display_settings_info_notification_callback.bind(this));
 			},
 			display_image_hover_notification: function () {
 				// Alert message
@@ -8413,9 +8589,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			settings.on_ready(file_link.start.bind(file_link));
 		}
 		else if (event.page_type == "image" || event.page_type == "video") {
+			// Settings
+			settings.setup();
+
 			// File view
 			file_view = new FileView();
-			file_view.start();
+			settings.on_ready(file_view.start.bind(file_view));
 		}
 	});
 	api.setup();
