@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.5
+// @version     2.6
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -18,14 +18,6 @@
 // @updateURL   https://raw.githubusercontent.com/dnsev/iex/master/builds/{{meta}}
 // @downloadURL https://raw.githubusercontent.com/dnsev/iex/master/builds/{{target}}
 // ==/Meta==
-
-
-
-/*
-(function () {
-"use strict";
-var main =
-*/
 
 
 
@@ -2040,7 +2032,7 @@ var main =
 			},
 
 			get_header_rect: function () {
-				var header = document.getElementById("header-bar");
+				var header = document.getElementById(this.is_4chanx ? "header-bar" : "boardNavMobile");
 				if (header) {
 					return style.get_object_rect(header);
 				}
@@ -2622,29 +2614,58 @@ var main =
 		};
 		var on_insert_links = function () {
 			var nav_nodes = [],
-				nav, par, i, c, n;
+				nav, par, i, c, n, separate;
 
 			if ((nav = document.getElementById("navtopright"))) {
-				nav_nodes.push(nav);
+				nav_nodes.push({
+					node: nav,
+					is_parent: true,
+					add_separators: true,
+					before: true,
+				});
 			}
 			if ((nav = document.getElementById("navbotright"))) {
-				nav_nodes.push(nav);
+				nav_nodes.push({
+					node: nav,
+					is_parent: true,
+					add_separators: true,
+					before: true,
+				});
+			}
+			if ((nav = document.getElementById("settingsWindowLinkMobile"))) {
+				nav_nodes.push({
+					node: nav,
+					is_parent: false,
+					add_separators: false,
+					before: true,
+				});
 			}
 
 			// Insert
 			for (i = 0; i < nav_nodes.length; ++i) {
-				par = nav_nodes[i];
+				par = nav_nodes[i].node;
+				separate = nav_nodes[i].add_separators;
 
-				c = par.firstChild;
-				if (c && c.nodeType == 3) { // TEXT_NODE
-					c.nodeValue = "] [";
+				if (nav_nodes[i].is_parent) {
+					c = par.firstChild;
 				}
 				else {
-					n = document.createTextNode("]");
-					if (c) par.insertBefore(n, c);
-					else par.appendChild(n);
+					c = par;
+					par = par.parentNode;
+					if (!par) continue;
+				}
 
-					c = n;
+				if (separate) {
+					if (c && c.nodeType == 3) { // TEXT_NODE
+						c.nodeValue = "] [";
+					}
+					else {
+						n = document.createTextNode("]");
+						if (c) par.insertBefore(n, c);
+						else par.appendChild(n);
+
+						c = n;
+					}
 				}
 
 				n = document.createElement("a");
@@ -2655,12 +2676,14 @@ var main =
 				par.insertBefore(n, c);
 				c = n;
 
-				n = document.createTextNode("[")
-				par.insertBefore(n, c);
+				if (separate) {
+					n = document.createTextNode("[")
+					par.insertBefore(n, c);
+				}
 			}
 		};
 		var on_insert_links_condition = function () {
-			return document.getElementById("navtopright") || document.getElementById("navbotright");
+			return document.getElementById("navtopright") || document.getElementById("navbotright") || document.getElementById("settingsWindowLinkMobile");
 		};
 
 		var on_install_complete_sync = function () {
@@ -2848,7 +2871,7 @@ var main =
 		};
 		var on_iex_difficulty_link_click = function (event, node) {
 			// Get target
-			var target = node.getAttribute("iex-settings-difficulty-choice-level") || "";
+			var target = node.getAttribute("data-iex-settings-difficulty-choice-level") || "";
 
 			// Update difficulty
 			change_settings_difficulty.call(this, target);
@@ -3362,7 +3385,7 @@ var main =
 			d_choice = document.createElement("a");
 			d_choice.className = "iex_settings_difficulty_choice" + style.theme;
 			d_choice.textContent = "normal";
-			d_choice.setAttribute("iex-settings-difficulty-choice-level", "normal");
+			d_choice.setAttribute("data-iex-settings-difficulty-choice-level", "normal");
 			d_container.appendChild(d_choice);
 			cb = wrap_generic_event(this, on_iex_difficulty_link_click);
 			d_choice.addEventListener("click", cb, false);
@@ -3382,7 +3405,7 @@ var main =
 			d_choice = document.createElement("a");
 			d_choice.className = "iex_settings_difficulty_choice" + style.theme;
 			d_choice.textContent = "advanced";
-			d_choice.setAttribute("iex-settings-difficulty-choice-level", "advanced");
+			d_choice.setAttribute("data-iex-settings-difficulty-choice-level", "advanced");
 			d_container.appendChild(d_choice);
 			d_choice.addEventListener("click", cb, false);
 			settings_removal_data.push({
@@ -4040,7 +4063,7 @@ var main =
 			// Modify difficulty
 			choices = this.settings_difficulty_container.querySelectorAll(".iex_settings_difficulty_choice");
 			for (i = 0; i < choices.length; ++i) {
-				level = choices[i].getAttribute("iex-settings-difficulty-choice-level");
+				level = choices[i].getAttribute("data-iex-settings-difficulty-choice-level");
 				if (level == target) {
 					style.add_class(choices[i], "iex_settings_difficulty_choice_selected");
 				}
@@ -8674,24 +8697,5 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 	api.setup();
 
 })();
-
-
-
-/*
-var init_interval = setInterval(function () {
-	var head;
-	if ((document.readyState == "interactive" || document.readyState == "complete") && (head = document.querySelector("head"))) {
-		var e = document.createElement("script");
-		e.innerHTML = "(" + main.toString() + ")();";
-		head.appendChild(e);
-		head.removeChild(e);
-		clearInterval(init_interval);
-	}
-}, 50);
-
-
-
-})();
-*/
 
 
