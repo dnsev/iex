@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.4
+// @version     2.5
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -54,30 +54,103 @@ var main =
 		}
 		alert(error_string);
 	};
-	var wrap_callback = function (callback, args) {
-		return function () {
-			callback.apply(this, args.concat(Array.prototype.slice.call(arguments, 0)));
+
+
+
+	// Function wrapping
+	/**
+		wrap_generic_event = function (self, callback, ...)
+
+		Wrap a simple event callback to maintain the original "this" object
+
+		@param self
+			The "this" object the callback should be called with
+		@param callback
+			The event callback to be used
+			The format is:
+			callback.call(self, event, node, ...)
+				self: the same object given from the self parameter
+				event: the mouseover/mouseout event
+				node: the node triggering the event
+				...: any extra argument specified in the original ...
+	*/
+	var wrap_generic_event = function (self, callback) {
+		// Get any extra arguments
+		var extra_args = Array.prototype.slice.call(arguments, 2);
+
+		// Return the function wrapped
+		return function (event) {
+			// Setup arguments
+			var new_args = [ event , this ],
+				i = 0,
+				im = extra_args.length;
+
+			for (; i < im; ++i) new_args.push(extra_args[i]);
+
+			// Run callback
+			return callback.apply(self, new_args);
 		};
 	};
-	var on_mouseenterleave_prehandle = function (self, callback, data, event) {
-		// Must check for same parent element
-		var parent = event.relatedTarget;
 
-		// Error handling
-		try {
-			// Find parents
-			while (parent && parent !== this) {
-				parent = parent.parentNode;
-			}
+	/**
+		wrap_mouseenterleave_event = function (self, callback, ...)
 
-			if (parent !== this) {
-				// Okay, handle event
-				return callback.call(self, this, data, event);
+		Wrap a mouseover/mouseout event to make it only execute on the correct node (not on child nodes)
+
+		@param self
+			The "this" object the callback should be called with
+		@param callback
+			The event callback to be used
+			The format is:
+			callback.call(self, event, node, ...)
+				self: the same object given from the self parameter
+				event: the mouseover/mouseout event
+				node: the node triggering the event
+				...: any extra argument specified in the original ...
+	*/
+	var wrap_mouseenterleave_event = (function () {
+
+		// Handle mouseover/mouseout events to make sure the target is correct
+		var on_mouseenterleave_prehandle = function (event, callback, self, extra_args) {
+			// Must check for same parent element
+			var parent = event.relatedTarget;
+
+			// Error handling
+			try {
+				// Find parents
+				while (parent) {
+					if (parent === this) return;
+					parent = parent.parentNode;
+				}
+
+				// Setup event arguments
+				var new_args = [ event , this ],
+					i = 0,
+					im = extra_args.length;
+
+				for (; i < im; ++i) new_args.push(extra_args[i]);
+
+				// Okay, trigger event
+				return callback.apply(self, new_args);
 			}
-		}
-		catch (e) {
-		}
-	};
+			catch (e) {
+			}
+		};
+
+
+
+		// Return a wrapping function
+		return function (self, callback) {
+			// Get any extra arguments
+			var args = Array.prototype.slice.call(arguments, 2);
+
+			// Return the function wrapped
+			return function (event) {
+				return on_mouseenterleave_prehandle.call(this, event, callback, self, args);
+			};
+		};
+
+	})();
 
 
 
@@ -1023,7 +1096,7 @@ var main =
 		var on_body_element_add = function (element) {
 			var id = element.getAttribute("id");
 			if (id == "fourchanx-settings") {
-				// 4chan-x / Spittie
+				// 4chan-x / ccd0
 				trigger_settings_4chanx_open.call(this, element);
 			}
 			else if (id == "appchanx-settings") {
@@ -1203,7 +1276,7 @@ var main =
 				// else, post might not be loaded yet
 			}
 			else if (id == "menu") {
-				// 4chan-x / Spittie, appchan-x
+				// 4chan-x / ccd0, appchan-x
 				trigger_menu_4chanx_open.call(this, element, null);
 			}
 		};
@@ -1221,7 +1294,7 @@ var main =
 				}
 			}
 			else if (id == "menu") {
-				// 4chan-x / Spittie, appchan-x
+				// 4chan-x / ccd0, appchan-x
 				trigger_menu_4chanx_close.call(this, element);
 			}
 		};
@@ -1261,7 +1334,7 @@ var main =
 			}
 		};
 
-		var on_menu_4chanx_entry_mouseenter = function (element, data, event) {
+		var on_menu_4chanx_entry_mouseenter = function (event, node) {
 			if (this.menu_4chanx_container) {
 				var focused = this.menu_4chanx_container.querySelectorAll(".focused"),
 					i;
@@ -1271,11 +1344,11 @@ var main =
 				}
 			}
 
-			style.add_class(element, "focused");
+			style.add_class(node, "focused");
 		};
-		var on_menu_4chanx_entry_mouseleave = function (element, data, event) {
-			// This is removed even for versions which menu items keep it (4chan-x / Spittie, etc.)
-			style.remove_class(element, "focused");
+		var on_menu_4chanx_entry_mouseleave = function (event, node) {
+			// This is removed even for versions which menu items keep it (4chan-x / ccd0, etc.)
+			style.remove_class(node, "focused");
 		};
 
 		var hook_document_observer = function () {
@@ -1734,8 +1807,9 @@ var main =
 				element.style.order = (order || 0);
 
 				// Events
-				var e_enter = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_menu_4chanx_entry_mouseenter , null ]),
-					e_leave = wrap_callback.call(this, on_mouseenterleave_prehandle, [ this , on_menu_4chanx_entry_mouseleave , null ]);
+				var e_enter = wrap_mouseenterleave_event(this, on_menu_4chanx_entry_mouseenter),
+					e_leave = wrap_mouseenterleave_event(this, on_menu_4chanx_entry_mouseleave);
+
 				element.addEventListener("mouseover", e_enter, false);
 				element.addEventListener("mouseout", e_leave, false);
 
@@ -2772,12 +2846,12 @@ var main =
 			this.settings_close();
 			window.location.reload(false);
 		};
-		var on_iex_difficulty_link_click = function (self, event) {
+		var on_iex_difficulty_link_click = function (event, node) {
 			// Get target
-			var target = this.getAttribute("iex-settings-difficulty-choice-level") || "";
+			var target = node.getAttribute("iex-settings-difficulty-choice-level") || "";
 
 			// Update difficulty
-			change_settings_difficulty.call(self, target);
+			change_settings_difficulty.call(this, target);
 
 			// Stop event
 			event.preventDefault();
@@ -3290,7 +3364,7 @@ var main =
 			d_choice.textContent = "normal";
 			d_choice.setAttribute("iex-settings-difficulty-choice-level", "normal");
 			d_container.appendChild(d_choice);
-			cb = wrap_callback(on_iex_difficulty_link_click, [ this ]);
+			cb = wrap_generic_event(this, on_iex_difficulty_link_click);
 			d_choice.addEventListener("click", cb, false);
 			settings_removal_data.push({
 				node: d_choice,
@@ -5640,12 +5714,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			this.mouse_hide_timer = null;
 
 			// Event bindings
-			this.on_image_mouseenter_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_mouseenter , null ]);
-			this.on_image_mouseleave_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_mouseleave , null ]);
-			this.on_image_connector_mouseenter_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_connector_mouseenter , null ]);
-			this.on_image_connector_mouseleave_bind = wrap_callback(on_mouseenterleave_prehandle, [ this , on_image_connector_mouseleave , null ]);
+			this.on_image_mouseenter_bind = wrap_mouseenterleave_event(this, on_image_mouseenter);
+			this.on_image_mouseleave_bind = wrap_mouseenterleave_event(this, on_image_mouseleave);
+			this.on_image_connector_mouseenter_bind = wrap_mouseenterleave_event(this, on_image_connector_mouseenter);
+			this.on_image_connector_mouseleave_bind = wrap_mouseenterleave_event(this, on_image_connector_mouseleave);
 
-			this.on_image_click_bind = wrap_callback(on_image_click, [ this ]);
+			this.on_image_click_bind = wrap_generic_event(this, on_image_click);
 
 			// More bindings
 			this.on_preview_close_timeout_bind = on_preview_close_timeout.bind(this);
@@ -6223,26 +6297,26 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			change_mouse_visibility.call(this, false);
 		};
 
-		var on_image_mouseenter = function (image_container, data, event) {
+		var on_image_mouseenter = function (event, image_container) {
 			// Don't run if disabled
 			if (this.disabled) return;
 
 			// Attempt to open
 			preview_open_test.call(this, image_container, null, true);
 		};
-		var on_image_mouseleave = function (image_container, data, event) {
+		var on_image_mouseleave = function (event, image_container) {
 			// Don't run if disabled
 			if (this.disabled) return;
 
 			// Close preview
 			this.preview_close(false);
 		};
-		var on_image_click = function (self, data, event) {
+		var on_image_click = function (event, image_container) {
 			// Don't run if disabled
-			if (self.disabled) return;
+			if (this.disabled) return;
 
 			// Close preview
-			setTimeout(on_image_click_delay.bind(self, this), 10);
+			setTimeout(on_image_click_delay.bind(this, image_container), 10);
 		};
 		var on_image_click_delay = function (image_container) {
 			var post_container = api.post_get_post_container_from_image_container(image_container);
@@ -6258,11 +6332,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			}
 		};
 
-		var on_image_connector_mouseenter = function (image_container, data, event) {
+		var on_image_connector_mouseenter = function (event, image_container) {
 			// Cancel close
 			this.preview_close_cancel();
 		};
-		var on_image_connector_mouseleave = function (image_container, data, event) {
+		var on_image_connector_mouseleave = function (event, image_container) {
 			// Close preview
 			this.preview_close(false);
 		};
@@ -6849,12 +6923,12 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 
 			// Events
-			parent.add_event_listener(this.stats_container, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_mouseenter , null ]), false);
-			parent.add_event_listener(this.stats_container, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_mouseleave , null ]), false);
-			parent.add_event_listener(this.stat_zoom, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_mouseenter , null ]), false);
+			parent.add_event_listener(this.stats_container, "mouseover", wrap_mouseenterleave_event(parent, on_stats_mouseenter), false);
+			parent.add_event_listener(this.stats_container, "mouseout", wrap_mouseenterleave_event(parent, on_stats_mouseleave), false);
+			parent.add_event_listener(this.stat_zoom, "mouseover", wrap_mouseenterleave_event(parent, on_stats_zoom_mouseenter), false);
 			parent.add_event_listener(this.zoom_controls, "mousedown", on_stats_zoom_controls_mousedown.bind(parent), false);
-			parent.add_event_listener(this.zoom_controls, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_controls_mouseenter , null ]), false);
-			parent.add_event_listener(this.zoom_controls, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_stats_zoom_controls_mouseleave , null ]), false);
+			parent.add_event_listener(this.zoom_controls, "mouseover", wrap_mouseenterleave_event(parent, on_stats_zoom_controls_mouseenter), false);
+			parent.add_event_listener(this.zoom_controls, "mouseout", wrap_mouseenterleave_event(parent, on_stats_zoom_controls_mouseleave), false);
 			parent.add_event_listener(stat_zoom_inc, "click", on_stats_zoom_control_click.bind(parent, 1), false);
 			parent.add_event_listener(stat_zoom_dec, "click", on_stats_zoom_control_click.bind(parent, -1), false);
 
@@ -7120,13 +7194,13 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 
 			var prevent = on_vcontrols_prevent_default_mousedown.bind(parent);
 
-			parent.add_event_listener(c_inner, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_mouseenter , null ]), false);
-			parent.add_event_listener(c_inner, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_mouseleave , null ]), false);
+			parent.add_event_listener(c_inner, "mouseover", wrap_mouseenterleave_event(parent, on_vcontrols_mouseenter), false);
+			parent.add_event_listener(c_inner, "mouseout", wrap_mouseenterleave_event(parent, on_vcontrols_mouseleave), false);
 			parent.add_event_listener(this.overlay_table, "mousedown", on_vcontrols_container_mousedown.bind(parent), false);
 			parent.add_event_listener(c_play_button, "click", on_vcontrols_play_button_click.bind(parent), false);
 			parent.add_event_listener(c_volume_button, "click", on_vcontrols_volume_button_click.bind(parent), false);
-			parent.add_event_listener(c_volume_button, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_volume_button_mouseenter , null ]), false);
-			parent.add_event_listener(c_buttons_right, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ parent , on_vcontrols_volume_button_container_mouseleave , null ]), false);
+			parent.add_event_listener(c_volume_button, "mouseover", wrap_mouseenterleave_event(parent, on_vcontrols_volume_button_mouseenter), false);
+			parent.add_event_listener(c_buttons_right, "mouseout", wrap_mouseenterleave_event(parent, on_vcontrols_volume_button_container_mouseleave), false);
 			parent.add_event_listener(this.seek_bar, "mousedown", on_vcontrols_seek_bar_mousedown.bind(parent), false);
 			parent.add_event_listener(this.volume_bar, "mousedown", on_vcontrols_volume_bar_mousedown.bind(parent), false);
 			parent.add_event_listener(this.time_current, "mousedown", prevent, false);
@@ -7149,15 +7223,15 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			var cp_nodes = this.cpreview.nodes,
 				event_bind;
 
-			this.add_event_listener(cp_nodes.container, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ this , on_mouseenter , null ]), false);
-			this.add_event_listener(cp_nodes.container, "mouseout", wrap_callback(on_mouseenterleave_prehandle, [ this , on_mouseleave , null ]), false);
+			this.add_event_listener(cp_nodes.container, "mouseover", wrap_mouseenterleave_event(this, on_mouseenter), false);
+			this.add_event_listener(cp_nodes.container, "mouseout", wrap_mouseenterleave_event(this, on_mouseleave), false);
 			this.add_event_listener(cp_nodes.container, "mousemove", on_mousemove.bind(this), false);
 			this.add_event_listener(cp_nodes.container, "mousewheel", (event_bind = on_mousewheel.bind(this)), false);
 			this.add_event_listener(cp_nodes.container, "DOMMouseScroll", event_bind, false);
 			this.add_event_listener(cp_nodes.container, "mousedown", on_mousedown.bind(this), false);
 			this.add_event_listener(cp_nodes.container, "contextmenu", on_contextmenu.bind(this), false);
 
-			this.add_event_listener(cp_nodes.overflow, "mouseover", wrap_callback(on_mouseenterleave_prehandle, [ this , on_overflow_mouseenter , null ]), false);
+			this.add_event_listener(cp_nodes.overflow, "mouseover", wrap_mouseenterleave_event(this, on_overflow_mouseenter), false);
 
 
 			// Setup classes
@@ -7561,7 +7635,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			update_video_play_status.call(this, this.nodes_video.video.paused);
 		};
 
-		var on_vcontrols_mouseenter = function (node, data, event) {
+		var on_vcontrols_mouseenter = function (event, node) {
 			// Do not show for non-video
 			if (this.type != TYPE_VIDEO) return;
 
@@ -7569,7 +7643,7 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
 			style.add_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible");
 		};
-		var on_vcontrols_mouseleave = function (node, data, event) {
+		var on_vcontrols_mouseleave = function (event, node) {
 			// Hide controls
 			style.remove_class(this.nodes_video.overlay_table, "iex_mpreview_vcontrols_table_visible");
 		};
@@ -7604,11 +7678,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			// Mute/unmute
 			this.set_video_muted(!this.nodes_video.video.muted);
 		};
-		var on_vcontrols_volume_button_mouseenter = function (node, data, event) {
+		var on_vcontrols_volume_button_mouseenter = function (event, node) {
 			// Show volume bar
 			style.add_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
 		};
-		var on_vcontrols_volume_button_container_mouseleave = function (node, data, event) {
+		var on_vcontrols_volume_button_container_mouseleave = function (event, node) {
 			// Hide volume bar
 			style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
 		};
@@ -7814,11 +7888,11 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 			event.stopPropagation();
 			return false;
 		};
-		var on_mouseenter = function (node, data, event) {
+		var on_mouseenter = function (event, node) {
 			// Trigger event
 			trigger.call(this, "mouse_enter", {});
 		};
-		var on_mouseleave = function (node, data, event) {
+		var on_mouseleave = function (event, node) {
 			// Trigger event
 			trigger.call(this, "mouse_leave", {});
 		};
@@ -7871,33 +7945,33 @@ textarea.iex_notification_textarea:focus{background-color:rgba(255,255,255,0.062
 				y: y,
 			});
 		};
-		var on_overflow_mouseenter = function (node, data, event) {
+		var on_overflow_mouseenter = function (event, node) {
 			// Trigger event
 			trigger.call(this, "mouse_enter_main", {});
 		};
 
-		var on_stats_mouseenter = function (node, data, event) {
+		var on_stats_mouseenter = function (event, node) {
 			// Stop hiding if it's already open
 			this.nodes.mouse_in_stats = true;
 			show_zoom_controls.call(this, false);
 		};
-		var on_stats_mouseleave = function (node, data, event) {
+		var on_stats_mouseleave = function (event, node) {
 			// Hide controls
 			this.nodes.mouse_in_stats = false;
 			hide_zoom_controls.call(this, false, true);
 		};
-		var on_stats_zoom_mouseenter = function (node, data, event) {
+		var on_stats_zoom_mouseenter = function (event, node) {
 			// Show controls
 			if (this.nodes.stats_zoom_controls_enabled) {
 				show_zoom_controls.call(this, true);
 			}
 		};
-		var on_stats_zoom_controls_mouseenter = function (node, data, event) {
+		var on_stats_zoom_controls_mouseenter = function (event, node) {
 			// Display controls and make fixed
 			show_zoom_controls.call(this, true);
 			set_zoom_controls_fixed.call(this, true);
 		};
-		var on_stats_zoom_controls_mouseleave = function (node, data, event) {
+		var on_stats_zoom_controls_mouseleave = function (event, node) {
 			// Make un-fixed and possibly hide
 			set_zoom_controls_fixed.call(this, false);
 			if (!this.nodes.mouse_in_stats) {
