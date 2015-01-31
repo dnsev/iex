@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.7
+// @version     2.7.1
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue

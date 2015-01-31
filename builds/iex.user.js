@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.7
+// @version     2.7.1
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -28,7 +28,7 @@
 	var is_firefox = (navigator.userAgent.toString().indexOf("Firefox") >= 0);
 	var is_chrome = (navigator.userAgent.toString().indexOf(" Chrome/") >= 0);
 	var is_opera = !is_firefox && !is_chrome && (navigator.userAgent.toString().indexOf("MSIE") < 0);
-	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.7","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
+	var userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"2.7.1","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"};
 
 	// Error logging
 	var log_error = function (error_string) {
@@ -319,25 +319,6 @@
 				clear_events();
 			}
 		};
-		var on_document_load = function () {
-			// Loaded
-			state = 2;
-
-			// Callbacks
-			var c;
-			if (callbacks_asap !== null) {
-				c = callbacks_asap;
-				callbacks_asap = null;
-				trigger_callbacks(c);
-			}
-
-			c = callbacks_ready;
-			callbacks_ready = null;
-			trigger_callbacks(c);
-
-			// Complete
-			clear_events();
-		};
 		var on_callbacks_check = function () {
 			// Test all
 			for (var i = 0; i < callbacks_check.length; ++i) {
@@ -458,8 +439,8 @@
 		on_document_readystatechange();
 		if (state < 2) {
 			document.addEventListener("readystatechange", on_document_readystatechange, false);
-			document.addEventListener("load", on_document_load, false);
-			on_document_readystatechange_interval = setInterval(on_document_readystatechange, 20);
+			document.addEventListener("load", on_document_readystatechange, false);
+			on_document_readystatechange_interval = setInterval(on_document_readystatechange, 250);
 		}
 
 
@@ -3009,6 +2990,7 @@
 			// Textarea
 			m_part = document.createElement("textarea");
 			m_part.className = "iex_notification_textarea";
+			m_part.setAttribute("spellcheck", "false");
 			m_part.value = saved_values;
 			message.appendChild(m_part);
 
