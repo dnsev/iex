@@ -933,7 +933,7 @@
 
 		})();
 		var title_is_relevant = function (title) {
-			return /[0-9\.]/.test(title);
+			return /^\s*[0-9\.]+\s*$/.test(title);
 		};
 		var parse = function () {
 			var changelog = [],

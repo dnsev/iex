@@ -603,6 +603,7 @@ ul.paragraph_list>li+li {
 	display: table-cell;
 	width: 50%;
 	text-align: center;
+	vertical-align: top;
 }
 .install_instruction_cell_body {
 	display: inline-block;
