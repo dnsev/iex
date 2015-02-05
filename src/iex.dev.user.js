@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.7.1
+// @version     2.7.2
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -1849,7 +1849,7 @@
 					n_file = this.post_get_file_info_container(post_container);
 
 					// Return
-					return (style.has_class(n_file, "image-expanded"));
+					return (style.has_class(n_file, "image-expanded") || n_file.querySelector("video.expandedWebm") !== null);
 				}
 			},
 			post_get_file_info: function (post_container) {
@@ -2000,6 +2000,19 @@
 				n = image_container;
 				while ((n = n.parentNode) && !style.has_class(n, "postContainer"));
 				return n;
+			},
+			post_get_image_expanded_from_image_container: function (image_container) {
+				if (this.is_4chanx) {
+					return image_container.querySelector(".full-image");
+				}
+				else {
+					var n = image_container.querySelector("img.expanded-thumb");
+					if (n !== null) return n;
+
+					if (image_container.parentNode === null) return null;
+
+					return image_container.parentNode.querySelector("video.expandedWebm");
+				}
 			},
 			post_get_file_nodes: function (post_container) {
 				var post = post_container.querySelector(".post"),
@@ -6418,12 +6431,18 @@
 			if (post_container === null) return;
 
 			if (api.post_is_image_expanded_or_expanding(post_container)) {
+				// Transfer state
+				var node = api.post_get_image_expanded_from_image_container(image_container);
+				if (node !== null) {
+					this.mpreview.transfer_state(node);
+				}
+
 				// Close
 				this.preview_close(true);
 			}
 			else {
 				// Attempt to open if still hovered
-				if (this.current_hover_container == image_container) {
+				if (this.current_hover_container === image_container) {
 					preview_open_test.call(this, image_container, post_container, false);
 				}
 			}
@@ -8155,7 +8174,6 @@
 
 				// Clear stats
 				this.clear_stats();
-
 			},
 
 			on: function (event, callback) {
@@ -8532,6 +8550,46 @@
 				this.nodes.stats_zoom_controls_enabled = enabled;
 			},
 
+			transfer_state: function (node) {
+				if (node.tagName === "VIDEO" && this.type === TYPE_VIDEO) {
+					// Transfer video state
+					var v = this.nodes_video.video,
+						muted = v.muted,
+						volume = v.volume,
+						time = v.currentTime,
+						paused = v.paused,
+						okay = false,
+						fn;
+
+					fn = function () {
+						this.muted = muted;
+						this.volume = volume;
+						this.currentTime = time;
+						if (paused) this.pause();
+						else this.play();
+					};
+
+					if (!node.paused || !isNaN(node.duration)) {
+						// Immediate
+						try {
+							fn.call(node);
+							okay = true;
+						}
+						catch (e) {}
+					}
+					if (!okay) {
+						// Delay until playing
+						var play_fn = function (event) {
+							try {
+								fn.call(this);
+							}
+							catch (e) {}
+							this.removeEventListener("play", play_fn, false);
+						};
+						node.addEventListener("play", play_fn, false);
+					}
+				}
+			},
 		};
 
 
