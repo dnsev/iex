@@ -2,7 +2,7 @@
 // @name        Image Extensions
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     2.7.2
+// @version     2.8
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -829,6 +829,36 @@
 				return new DelayEach(0, array, callback, max_count, delay * 1000, true);
 			},
 
+		};
+
+	})();
+
+	// Timing function
+	var timing = (function () {
+
+		var perf = window.performance,
+			now;
+
+		if (perf) {
+			now = performance.now ||
+				performance.mozNow ||
+				performance.msNow ||
+				performance.oNow ||
+				performance.webkitNow;
+
+			if (now) {
+				return function () {
+					return now.call(perf);
+				};
+			}
+		}
+
+
+
+		perf = null;
+		now = null;
+		return function () {
+			return new Date().getTime();
 		};
 
 	})();
@@ -2129,6 +2159,40 @@
 				}
 			},
 
+			observe_children: function (parent_node, cb) {
+				// Create new observer
+				var o = new MutationObserver(function (records) {
+					var i, j, nodes;
+
+					for (i = 0; i < records.length; ++i) {
+						if ((nodes = records[i].addedNodes)) {
+							for (j = 0; j < nodes.length; ++j) {
+								// Check
+								cb.call(null, true, nodes[j]);
+							}
+						}
+						if ((nodes = records[i].removedNodes)) {
+							for (j = 0; j < nodes.length; ++j) {
+								// Check
+								cb.call(null, false, nodes[j]);
+							}
+						}
+					}
+				});
+
+				// Observe
+				o.observe(
+					parent_node,
+					{
+						childList: true,
+					}
+				);
+
+				// Done
+				return function () {
+					o.disconnect();
+				};
+			},
 		};
 
 
@@ -2396,16 +2460,20 @@
 					},
 					"extensions": {
 						"jpg": {
-							"background": 1, // 0 : never show, 1: show before load (transparent), 2: show before load (opaque)
+							"background": 1, // 0 = never show, 1 = show before load (transparent), 2 = show before load (opaque)
+							"mouse_wheel": 0 // 0 = zoom, 1 = volume control
 						},
 						"png": {
 							"background": 1,
+							"mouse_wheel": 0
 						},
 						"gif": {
 							"background": 1,
+							"mouse_wheel": 0
 						},
 						"webm": {
 							"background": 2,
+							"mouse_wheel": 0
 						},
 					},
 					"video": {
@@ -2414,6 +2482,7 @@
 						"mute_initially": false,
 						"volume": 0.5,
 						"mini_controls": 1, // 0 = never, 1 = when mouse is over the video, 2 = when mouse is NOT over the video, 3 = always
+						"expand_state_save": true
 					},
 					"style": {
 						"animations_background": true,
@@ -3582,7 +3651,7 @@
 				level: "normal",
 				section: "Image Expansion",
 				tree: [ "image_expansion" , "normal" , "to_fit" ],
-				label: "Fit Image",
+				label: "Fit image",
 				sublabel: "for non-spoiler images",
 				description: "Automatically fit the image to the best screen size on hover",
 				type: "checkbox",
@@ -3594,7 +3663,7 @@
 				level: "normal",
 				section: "Image Expansion",
 				tree: [ "image_expansion" , "spoiler" , "to_fit" ],
-				label: "Fit Image",
+				label: "Fit image",
 				sublabel: "for spoiler images",
 				description: "Automatically fit the image to the best screen size on hover",
 				type: "checkbox",
@@ -3607,7 +3676,7 @@
 				section: "Image Expansion",
 				tree: [ "image_expansion" , "normal" , "timeout" ],
 				modify: string_to_float,
-				label: "Open Timeout",
+				label: "Open timeout",
 				sublabel: "for non-spoiler images",
 				description: "Time to wait before displaying the image (in seconds)",
 				type: "textbox",
@@ -3618,7 +3687,7 @@
 				section: "Image Expansion",
 				tree: [ "image_expansion" , "spoiler" , "timeout" ],
 				modify: string_to_float,
-				label: "Open Timeout",
+				label: "Open timeout",
 				sublabel: "for spoiler images",
 				description: "Time to wait before displaying the image (in seconds)",
 				type: "textbox",
@@ -3629,7 +3698,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "header_overlap" ],
-				label: "Overlap Header",
+				label: "Overlap header",
 				description: "If the header is visible, the preview will not overlap it",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3640,7 +3709,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "fit_large_allowed" ],
-				label: "Fit Large",
+				label: "Fit large",
 				description: "When enabled, image zooming can be snapped to both vertical and horizontal scales",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3651,7 +3720,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "display_stats" ],
-				label: "Display Stats",
+				label: "Display stats",
 				description: "Show the file name and relevant stats on top of the preview",
 				type: "text",
 				values: [ 0 , 1 , 2 ],
@@ -3662,7 +3731,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "zoom_invert" ],
-				label: "Zoom Invert Mouse",
+				label: "Zoom invert mouse",
 				description: "Zoom location based on mouse will be inverted",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3673,7 +3742,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "zoom_borders_show" ],
-				label: "Zoom Borders",
+				label: "Zoom borders",
 				description: "Display borders inside the preview displaying the mouse movement region",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3685,7 +3754,7 @@
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "zoom_borders_hide_time" ],
 				modify: string_to_float,
-				label: "Zoom Borders Hide Timeout",
+				label: "Zoom borders hide timeout",
 				description: "Time to wait after mouse has stopped to hide the zoom borders (in seconds)",
 				type: "textbox",
 			});
@@ -3694,7 +3763,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "zoom_buttons" ],
-				label: "Zoom Buttons",
+				label: "Zoom buttons",
 				description: "Show zooming buttons when the zoom% is hovered",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3705,7 +3774,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "mouse_hide" ],
-				label: "Cursor Hide",
+				label: "Cursor hide",
 				description: "Hide the mouse cursor when hovering the image after inactivity",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3717,7 +3786,7 @@
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "mouse_hide_time" ],
 				modify: string_to_float,
-				label: "Cursor Hide Timeout",
+				label: "Cursor hide timeout",
 				description: "Time to wait after mouse has stopped to hide cursor (in seconds)",
 				type: "textbox",
 			});
@@ -3727,7 +3796,7 @@
 				section: "Hover",
 				tree: [ "image_expansion" , "hover" , "mouse_hide_time" ],
 				modify: string_to_float,
-				label: "Cursor Hide Timeout",
+				label: "Cursor hide timeout",
 				description: "Time to wait after mouse has stopped to hide cursor (in seconds)",
 				type: "textbox",
 			});
@@ -3737,7 +3806,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "extensions" , "jpg" , "background" ],
-				label: "Thumbnail Background (.jpg)",
+				label: "Thumbnail background (.jpg)",
 				description: "How to display the thumbnail image in the background while loading",
 				type: "text",
 				values: [ 0 , 1 , 2 ],
@@ -3748,7 +3817,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "extensions" , "png" , "background" ],
-				label: "Thumbnail Background (.png)",
+				label: "Thumbnail background (.png)",
 				description: "How to display the thumbnail image in the background while loading",
 				type: "text",
 				values: [ 0 , 1 , 2 ],
@@ -3759,7 +3828,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "extensions" , "gif" , "background" ],
-				label: "Thumbnail Background (.gif)",
+				label: "Thumbnail background (.gif)",
 				description: "How to display the thumbnail image in the background while loading",
 				type: "text",
 				values: [ 0 , 1 , 2 ],
@@ -3770,7 +3839,7 @@
 				level: "normal",
 				section: "Hover",
 				tree: [ "image_expansion" , "extensions" , "webm" , "background" ],
-				label: "Thumbnail Background (.webm)",
+				label: "Thumbnail background (.webm)",
 				description: "How to display the thumbnail image in the background while loading",
 				type: "text",
 				values: [ 0 , 1 , 2 ],
@@ -3782,7 +3851,7 @@
 				level: "normal",
 				section: "Video",
 				tree: [ "image_expansion" , "video" , "mini_controls" ],
-				label: "Mini Controls",
+				label: "Mini controls",
 				description: "When to display the mini control bar",
 				type: "text",
 				values: [ 0 , 1 , 2 , 3 ],
@@ -3822,13 +3891,45 @@
 				value_labels: [ "don't mute" , "mute" ],
 			});
 
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "volume" ],
+				modify: string_to_float,
+				label: "Default volume",
+				description: "The default volume of a video when it is opened",
+				type: "textbox",
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "video" , "expand_state_save" ],
+				label: "Expansion state save",
+				description: "The video state should be saved and resumed when expanding",
+				type: "checkbox",
+				values: [ false , true ],
+				value_labels: [ "don't save" , "save" ],
+			});
+
+			descriptors.push({
+				level: "normal",
+				section: "Video",
+				tree: [ "image_expansion" , "extensions" , "webm" , "mouse_wheel" ],
+				label: "Mouse wheel action (.webm)",
+				description: "What scrolling the mouse should do for .webm files",
+				type: "text",
+				values: [ 0 , 1 ],
+				value_labels: [ "zoom" , "volume control" ]
+			});
+
 			// Link settings
 			descriptors.push({
 				level: "normal",
 				section: "Linkification",
 				tree: [ "file_linkification" , "enabled" ],
-				label: "Named File URLs",
-				description: "Appends the filename to the url as a #fragment (for semantic purposes)",
+				label: "Named file URLs",
+				description: "Appends the filename to the url as a #fragment (asthetic purposes)",
 				type: "checkbox",
 				values: [ false , true ],
 				value_labels: [ "disabled" , "enabled" ],
@@ -3839,7 +3940,7 @@
 				level: "normal",
 				section: "Style",
 				tree: [ "image_expansion" , "style" , "animations_background" ],
-				label: "Background Image Animations",
+				label: "Background image animations",
 				description: "Use animated CSS transitions for the background image",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3850,7 +3951,7 @@
 				level: "normal",
 				section: "Style",
 				tree: [ "image_expansion" , "style" , "controls_rounded_border" ],
-				label: "Rounded Borders on Controls",
+				label: "Rounded borders on controls",
 				description: "Use rounded corners on video control bars (doesn't work on Chrome)",
 				type: "checkbox",
 				values: [ false , true ],
@@ -3862,7 +3963,7 @@
 				level: "advanced",
 				section: "Debugging",
 				change: on_iex_setting_display_settings.bind(this),
-				label: "Display Local Settings",
+				label: "Display local settings",
 				description: "Display all saved local data in a pop-up textbox",
 				type: "text",
 				values: [ true ],
@@ -3873,7 +3974,7 @@
 				level: "advanced",
 				section: "Debugging",
 				change: on_iex_setting_delete_settings.bind(this),
-				label: "Delete Local Settings",
+				label: "Delete local settings",
 				description: "Delete all saved local data and refresh the page",
 				type: "text",
 				values: [ true ],
@@ -4944,7 +5045,7 @@
 					'.iex_mpreview_vcontrols_container{display:block;position:absolute;left:0;top:0;bottom:0;right:0;background:transparent;font-size:1.5em;}',
 					'.iex_mpreview_vcontrols_container_inner{display:block;position:absolute;left:0;bottom:0;right:0;padding-top:2em;height:2em;background:transparent;}',
 					'.iex_mpreview_vcontrols_table{display:table;width:100%;height:100%;}',
-					'.iex_mpreview_vcontrols_table:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important):not(.iex_mpreview_vcontrols_table_mini),',
+					'.iex_mpreview_vcontrols_table:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important):not(.iex_mpreview_vcontrols_table_mini),',
 					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini_disabled{display:none;}',
 					'.iex_mpreview_vcontrols_seek_container{display:table-cell;vertical-align:bottom;min-width:1em;}',
 					'.iex_mpreview_vcontrols_seek_container_inner{display:block;width:100%;height:2em;position:relative;}',
@@ -4961,7 +5062,7 @@
 
 					'.iex_mpreview_vcontrols_volume_container_position{display:block;position:absolute;bottom:100%;right:0;margin-bottom:-0.5em;}',
 					'.iex_mpreview_vcontrols_volume_container{width:2em;height:9em;position:relative;}',
-					'.iex_mpreview_vcontrols_volume_container:not(.iex_mpreview_vcontrols_volume_container_visible):not(.iex_mpreview_vcontrols_volume_container_visible_important){display:none;}',
+					'.iex_mpreview_vcontrols_volume_container:not(.iex_mpreview_vcontrols_volume_container_visible):not(.iex_mpreview_vcontrols_volume_container_visible_important):not(.iex_mpreview_vcontrols_volume_container_visible_temp){display:none;}',
 					'.iex_mpreview_vcontrols_volume_bar{position:absolute;left:0.5em;right:0.5em;top:0.5em;bottom:0.5em;border-radius:0.5em;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,0.5);}',
 					'.iex_mpreview_vcontrols_volume_bar.iex_mpreview_vcontrols_no_border_radius{border-radius:0;}',
 					'.iex_mpreview_vcontrols_volume_bar_bg{position:absolute;left:0;top:0;bottom:0;right:0;background-color:#ffffff;opacity:0.825;}',
@@ -4972,11 +5073,11 @@
 					'.iex_mpreview_vcontrols_button_container_inner2{display:block;position:absolute;left:0;top:0;bottom:0;right:0;}',
 					'.iex_mpreview_vcontrols_button_mouse_controller{position:absolute;left:0;top:0;bottom:0;right:0;margin:0.4em;cursor:pointer;}',
 
-					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_button_container{display:none;}',
-					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_seek_container{min-width:0;}',
-					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>.iex_mpreview_vcontrols_seek_container_inner{height:0.125em;}',
-					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>.iex_mpreview_vcontrols_seek_bar{top:0;bottom:0;border-radius:0;border:0 hidden;}',
-					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>*>*>.iex_mpreview_vcontrols_seek_time_table{display:none;}',
+					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_button_container{display:none;}',
+					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important)>.iex_mpreview_vcontrols_seek_container{min-width:0;}',
+					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important)>*>.iex_mpreview_vcontrols_seek_container_inner{height:0.125em;}',
+					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>.iex_mpreview_vcontrols_seek_bar{top:0;bottom:0;border-radius:0;border:0 hidden;}',
+					'.iex_mpreview_vcontrols_table.iex_mpreview_vcontrols_table_mini:not(.iex_mpreview_vcontrols_table_visible):not(.iex_mpreview_vcontrols_table_visible_temp):not(.iex_mpreview_vcontrols_table_visible_important)>*>*>*>*>.iex_mpreview_vcontrols_seek_time_table{display:none;}',
 
 					'.iex_svg_play_button{display:block;}',
 					'.iex_svg_play_button.iex_svg_play_button_playing>.iex_svg_button_scale_group>.iex_svg_play_button_play_icon,',
@@ -5842,7 +5943,7 @@
 			this.on_preview_video_can_play_through_bind = on_preview_video_can_play_through.bind(this);
 			this.on_preview_video_load_bind = on_preview_video_load.bind(this);
 			this.on_preview_video_error_bind = on_preview_video_error.bind(this);
-			this.on_preview_video_volume_change_bind = on_preview_video_volume_change.bind(this);
+			//this.on_preview_video_volume_change_bind = on_preview_video_volume_change.bind(this);
 
 			this.on_preview_size_change_bind = on_preview_size_change.bind(this);
 
@@ -5880,6 +5981,7 @@
 			settings.on_change(["image_expansion", "video", "mute_initially"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "video", "volume"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "video", "mini_controls"], this.on_settings_value_change_bind);
+			settings.on_change(["image_expansion", "video", "expand_state_save"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "style", "controls_rounded_border"], this.on_settings_value_change_bind);
 			settings.on_change(["image_expansion", "style", "animations_background"], this.on_settings_value_change_bind);
 
@@ -5932,6 +6034,7 @@
 					mute_initially: false,
 					volume: 0.5,
 					mini_controls: 1, // 0 = never, 1 = when mouse is over the video, 2 = when mouse is NOT over the video, 3 = always
+					expand_state_save: true
 				},
 				style: {
 					controls_rounded_border: true,
@@ -6022,7 +6125,7 @@
 			this.mpreview.on("video_can_play_through", this.on_preview_video_can_play_through_bind);
 			this.mpreview.on("video_load", this.on_preview_video_load_bind);
 			this.mpreview.on("video_error", this.on_preview_video_error_bind);
-			this.mpreview.on("video_volume_change", this.on_preview_video_volume_change_bind);
+			//this.mpreview.on("video_volume_change", this.on_preview_video_volume_change_bind);
 
 			this.mpreview.on("size_change", this.on_preview_size_change_bind);
 
@@ -6335,9 +6438,29 @@
 		};
 
 		var on_preview_mouse_wheel = function (event) {
-			// Zoom in/out
-			change_zoom_level.call(this, event.delta);
-			if (this.settings.zoom_borders_show) change_zoom_borders_visibility.call(this, true);
+			if (event.mode === 0) {
+				// Zoom
+				change_zoom_level.call(this, event.delta);
+				if (this.settings.zoom_borders_show) change_zoom_borders_visibility.call(this, true);
+			}
+			else { // if (event.mode === 1) {
+				// Change volume
+				if (this.mpreview.get_type() === MediaPreview.TYPE_VIDEO) {
+					// New volume
+					var v = this.mpreview.get_video_volume() + (event.delta * 5.0 / 100.0);
+
+					// Bound
+					if (v < 0.0) v = 0.0;
+					else if (v > 1.0) v = 1.0;
+
+					// Update
+					this.mpreview.set_video_volume(v);
+					if (this.mpreview.get_video_muted()) {
+						this.mpreview.set_video_muted(false);
+					}
+					this.mpreview.set_show_volume_controls_temp(true, 0.5);
+				}
+			}
 			change_mouse_visibility.call(this, true);
 		};
 		var on_preview_mouse_enter = function (event) {
@@ -6432,13 +6555,20 @@
 
 			if (api.post_is_image_expanded_or_expanding(post_container)) {
 				// Transfer state
-				var node = api.post_get_image_expanded_from_image_container(image_container);
-				if (node !== null) {
-					this.mpreview.transfer_state(node);
+				if (this.settings.video.expand_state_save) {
+					var expanded_node = api.post_get_image_expanded_from_image_container(image_container);
+					if (expanded_node !== null) {
+						this.mpreview.transfer_video_state(expanded_node);
+					}
 				}
 
 				// Close
 				this.preview_close(true);
+
+				// Observe expanded node
+				if (this.settings.video.expand_state_save) {
+					observe_expanded.call(this, expanded_node, image_container);
+				}
 			}
 			else {
 				// Attempt to open if still hovered
@@ -6506,6 +6636,96 @@
 				event.stopPropagation();
 				return false;
 			}
+		};
+
+		var observe_expanded = function (node, image_container) {
+			// Ignore if invalid node
+			if (node.parentNode === null || node.tagName !== "VIDEO" || style.has_class(node, "iex_observing")) return;
+			style.add_class(node, "iex_observing");
+
+			var State = function (time, n) {
+				this.time = time;
+				this.volume = n.volume;
+				this.muted = n.muted;
+				this.paused = n.paused;
+			};
+
+			var self = this,
+				time_min_interval = 0.25 * 1000,
+				state_pre = new State(timing() - time_min_interval, node),
+				state = state_pre,
+				current_time = 0.0,
+				disconnect, on_volumechange, on_timeupdate, on_pause, on_play;
+
+			// Listen for video state changing events
+			on_volumechange = function (event) {
+				var t = timing();
+				if (t - state.time >= time_min_interval) {
+					state_pre = state;
+					state = new State(t, this);
+				}
+				else {
+					state.volume = this.volume;
+					state.muted = this.muted;
+				}
+			};
+			on_pause = function (event) {
+				var t = timing();
+				if (t - state.time >= time_min_interval) {
+					state_pre = state;
+					state = new State(t, this);
+				}
+				else {
+					state.paused = this.paused;
+				}
+			};
+			on_play = function (event) {
+				var t = timing();
+				if (t - state.time >= time_min_interval) {
+					state_pre = state;
+					state = new State(t, this);
+				}
+				else {
+					state.paused = this.paused;
+				}
+			};
+			on_timeupdate = function (event) {
+				current_time = this.currentTime;
+			};
+
+			node.addEventListener("play", on_volumechange, false);
+			node.addEventListener("pause", on_volumechange, false);
+			node.addEventListener("timeupdate", on_timeupdate, false);
+			node.addEventListener("volumechange", on_volumechange, false);
+
+			// Observe for removal
+			disconnect = api.observe_children(node.parentNode, function (added, n) {
+				if (!added && n === node) {
+					// Node removed
+					disconnect();
+					n.removeEventListener("play", on_volumechange, false);
+					n.removeEventListener("pause", on_volumechange, false);
+					n.removeEventListener("timeupdate", on_timeupdate, false);
+					n.removeEventListener("volumechange", on_volumechange, false);
+					style.remove_class(n, "iex_observing");
+
+					// Update
+					if (self.mpreview !== null && self.mpreview.is_visible()) {
+						var t = timing(),
+							s = state;
+
+						if (t - s.time < time_min_interval) s = state_pre;
+
+						// Update state
+						self.mpreview.load_video_state({
+							time: current_time,
+							volume: s.volume,
+							muted: s.muted,
+							paused: s.paused,
+						});
+					}
+				}
+			});
 		};
 
 
@@ -6653,6 +6873,7 @@
 
 				// Background
 				this.mpreview.set_background(post_info.thumb, ext_bg_show);
+				this.mpreview.set_mouse_wheel_mode(settings.values.image_expansion.extensions[ext_info.ext].mouse_wheel);
 
 				// Size
 				if (post_info.resolution.width > 0 && post_info.resolution.height > 0) {
@@ -6908,6 +7129,7 @@
 				v_set.mute_initially = vs.mute_initially;
 				v_set.volume = vs.volume;
 				v_set.mini_controls = vs.mini_controls;
+				v_set.expand_state_save = vs.expand_state_save;
 
 				s_set.controls_rounded_border = ss.controls_rounded_border;
 				s_set.animations_background = ss.animations_background;
@@ -7364,7 +7586,7 @@
 
 
 			// Settings
-			this.type = TYPE_NONE;
+			this.type = MediaPreview.TYPE_NONE;
 
 			this.zoom = 1;
 
@@ -7372,6 +7594,9 @@
 			this.fit_large = false;
 			this.fit_large_allowed = true;
 			this.fit_axis = 0;
+
+			this.mouse_wheel_mode = 0;
+			this.volume_controls_temp_timer = null;
 
 			this.style = {
 				vcontrols_rounded: true,
@@ -7410,9 +7635,9 @@
 
 
 
-		var TYPE_NONE = 0;
-		var TYPE_IMAGE = 1;
-		var TYPE_VIDEO = 2;
+		MediaPreview.TYPE_NONE = 0;
+		MediaPreview.TYPE_IMAGE = 1;
+		MediaPreview.TYPE_VIDEO = 2;
 
 
 
@@ -7681,7 +7906,7 @@
 		};
 
 		var on_video_loadedmetadata = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			var video = this.nodes_video.video,
 				w = video.videoWidth,
@@ -7705,21 +7930,21 @@
 			trigger.call(this, "video_ready", {});
 		};
 		var on_video_canplay = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Event
 			on_video_progress.call(this, event);
 			trigger.call(this, "video_can_play", {});
 		};
 		var on_video_canplaythrough = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Event
 			on_video_progress.call(this, event);
 			trigger.call(this, "video_can_play_through", {});
 		};
 		var on_video_progress = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			var video = this.nodes_video.video,
 				percent = 0.0;
@@ -7737,7 +7962,7 @@
 			}
 		};
 		var on_video_error = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Hide video
 			style.remove_class(this.nodes_video.video, "iex_mpreview_video_visible");
@@ -7749,13 +7974,13 @@
 			});
 		};
 		var on_video_timeupdate = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Update time progress
 			update_video_seek_status.call(this, this.nodes_video.video.currentTime);
 		};
 		var on_video_ended = function (event) {
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Update buttons
 			update_video_play_status.call(this, this.nodes_video.video.paused);
@@ -7763,7 +7988,7 @@
 
 		var on_vcontrols_mouseenter = function (event, node) {
 			// Do not show for non-video
-			if (this.type != TYPE_VIDEO) return;
+			if (this.type !== MediaPreview.TYPE_VIDEO) return;
 
 			// Show controls
 			style.remove_class(this.nodes_video.volume_container, "iex_mpreview_vcontrols_volume_container_visible");
@@ -7915,7 +8140,7 @@
 			if (this.nodes_video.seeking) {
 				var duration = video.duration;
 				if (!isNaN(duration)) {
-					var loaded = video.buffered.end(0) / duration;
+					var loaded = (video.buffered.length > 0) ? video.buffered.end(0) / duration : 0.0;
 
 					// Get percent
 					percent = (x - bar_rect.left) / (bar_rect.right - bar_rect.left);
@@ -7970,7 +8195,7 @@
 		};
 
 		var on_image_load = function (event) {
-			if (this.type != TYPE_IMAGE) return;
+			if (this.type != MediaPreview.TYPE_IMAGE) return;
 
 			// True size
 			var w = this.nodes_image.image.naturalWidth,
@@ -7986,7 +8211,7 @@
 			trigger.call(this, "image_load", {});
 		};
 		var on_image_error = function (event) {
-			if (this.type != TYPE_IMAGE) return;
+			if (this.type != MediaPreview.TYPE_IMAGE) return;
 
 			// Hide image
 			style.remove_class(this.nodes_image.image, "iex_mpreview_image_visible");
@@ -8006,7 +8231,8 @@
 
 			// Trigger event
 			trigger.call(this, "mouse_wheel", {
-				delta: delta
+				delta: delta,
+				mode: this.mouse_wheel_mode
 			});
 
 			// Prevent
@@ -8144,18 +8370,18 @@
 
 			clear: function () {
 				var type = this.type;
-				this.type = TYPE_NONE;
+				this.type = MediaPreview.TYPE_NONE;
 
 				// Clear background
 				this.nodes.background.style.backgroundImage = "";
 				style.remove_classes(this.nodes.background, "iex_mpreview_background_visible iex_mpreview_background_visible_full iex_mpreview_background_disabled iex_mpreview_background_fallback");
 
-				if (type == TYPE_IMAGE) {
+				if (type == MediaPreview.TYPE_IMAGE) {
 					// Remove previous image
 					style.remove_class(this.nodes_image.image, "iex_mpreview_image_visible");
 					this.nodes_image.image.removeAttribute("src");
 				}
-				else if (type == TYPE_VIDEO) {
+				else if (type == MediaPreview.TYPE_VIDEO) {
 					// Clear video
 					style.remove_classes(this.nodes_video.video, "iex_mpreview_video_visible iex_mpreview_video_not_ready");
 					this.set_video_paused(true);
@@ -8198,12 +8424,22 @@
 				return false;
 			},
 
+			get_type: function () {
+				return this.type;
+			},
+			get_video_volume: function () {
+				return (this.type !== MediaPreview.TYPE_VIDEO) ? 0.0 : this.nodes_video.video.volume;
+			},
+			get_video_muted: function () {
+				return (this.type !== MediaPreview.TYPE_VIDEO) ? true : this.nodes_video.video.muted;
+			},
+
 			set_image: function (image) {
 				// Unset previous
 				this.clear();
 
 				// Set type
-				this.type = TYPE_IMAGE;
+				this.type = MediaPreview.TYPE_IMAGE;
 				if (this.nodes_image === null) this.nodes_image = new MediaPreviewImageNodes(this);
 
 				// Set
@@ -8215,7 +8451,7 @@
 				this.clear();
 
 				// Set type
-				this.type = TYPE_VIDEO;
+				this.type = MediaPreview.TYPE_VIDEO;
 				if (this.nodes_video === null) {
 					this.nodes_video = new MediaPreviewVideoNodes(this);
 					this.set_vcontrols_borders_rounded(this.style.vcontrols_rounded);
@@ -8257,6 +8493,10 @@
 			set_background_animations: function (animate) {
 				if (animate) style.add_class(this.nodes.background, "iex_transitions");
 				else style.remove_class(this.nodes.background, "iex_transitions");
+			},
+
+			set_mouse_wheel_mode: function (mode) {
+				this.mouse_wheel_mode = mode;
 			},
 
 			set_view_borders: function (horizontal, vertical) {
@@ -8399,6 +8639,38 @@
 
 				// Update buttons
 				update_video_play_status.call(this, paused);
+			},
+
+			set_show_volume_controls_temp: function (show, duration) {
+				if (this.type !== MediaPreview.TYPE_VIDEO) return;
+
+				// Toggle
+				var cls1 = "iex_mpreview_vcontrols_table_visible_temp",
+					cls2 = "iex_mpreview_vcontrols_volume_container_visible_temp";
+
+				if (show) {
+					style.add_class(this.nodes_video.overlay_table, cls1);
+					style.add_class(this.nodes_video.volume_container, cls2);
+
+					// Timer
+					if (duration !== undefined) {
+						if (this.volume_controls_temp_timer !== null) {
+							clearTimeout(this.volume_controls_temp_timer);
+						}
+						this.volume_controls_temp_timer = setTimeout(this.set_show_volume_controls_temp.bind(this, false, 0.0), duration * 1000);
+					}
+				}
+				else {
+					// Hide
+					style.remove_class(this.nodes_video.overlay_table, cls1);
+					style.remove_class(this.nodes_video.volume_container, cls2);
+
+					// Clear timeout
+					if (this.volume_controls_temp_timer !== null) {
+						clearTimeout(this.volume_controls_temp_timer);
+						this.volume_controls_temp_timer = null;
+					}
+				}
 			},
 
 			is_visible: function () {
@@ -8550,8 +8822,8 @@
 				this.nodes.stats_zoom_controls_enabled = enabled;
 			},
 
-			transfer_state: function (node) {
-				if (node.tagName === "VIDEO" && this.type === TYPE_VIDEO) {
+			transfer_video_state: function (node) {
+				if (node.tagName === "VIDEO" && this.type === MediaPreview.TYPE_VIDEO) {
 					// Transfer video state
 					var v = this.nodes_video.video,
 						muted = v.muted,
@@ -8587,6 +8859,40 @@
 							this.removeEventListener("play", play_fn, false);
 						};
 						node.addEventListener("play", play_fn, false);
+					}
+				}
+			},
+			load_video_state: function (state) {
+				if (this.type === MediaPreview.TYPE_VIDEO) {
+					// Update
+					var self = this,
+						v = this.nodes_video.video,
+						target = v.getAttribute("src") || "",
+						event_fn, fn;
+
+					fn = function () {
+						// Set state
+						this.set_video_muted(state.muted);
+						this.set_video_volume(state.volume);
+						this.set_video_paused(state.paused);
+						this.nodes_video.video.currentTime = state.time;
+					};
+
+					if (isNaN(v.currentTime) || v.buffered.length <= 0) {
+						// Delay
+						self = this;
+						event_fn = function () {
+							if (target === this.getAttribute("src") || "") {
+								fn.call(self);
+							}
+							this.removeEventListener("loadedmetadata", event_fn, false);
+						};
+
+						// Listen
+						v.addEventListener("loadedmetadata", event_fn, false);
+					}
+					else {
+						fn.call(this);
 					}
 				}
 			},
