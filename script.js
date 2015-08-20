@@ -27,143 +27,68 @@
 
 
 
-	// Module for performing actions as soon as possible
-	var ASAP = (function () {
+	// Ready state
+	var on_ready = (function () {
 
-		// Variables
-		var state = 0;
-		var callbacks_asap = [];
-		var callbacks_ready = [];
-		var on_document_readystatechange_interval = null;
+		// Vars
+		var callbacks = [],
+			check_interval = null,
+			check_interval_time = 250;
 
-		// Events
-		var on_document_readystatechange = function () {
-			// State check
-			if (document.readyState == "interactive") {
-				if (state == 0) {
-					// Mostly loaded
-					state = 1;
+		// Check if ready and run callbacks
+		var callback_check = function () {
+			if (
+				(document.readyState === "interactive" || document.readyState === "complete") &&
+				callbacks !== null
+			) {
+				// Run callbacks
+				var cbs = callbacks,
+					cb_count = cbs.length,
+					i;
 
-					// Callbacks
-					var c = callbacks_asap;
-					callbacks_asap = null;
-					trigger_callbacks(c);
-				}
-			}
-			else if (document.readyState == "complete") {
-				// Loaded
-				state = 2;
+				// Clear
+				callbacks = null;
 
-				// Callbacks
-				var c;
-				if (callbacks_asap !== null) {
-					c = callbacks_asap;
-					callbacks_asap = null;
-					trigger_callbacks(c);
+				for (i = 0; i < cb_count; ++i) {
+					cbs[i].call(null);
 				}
 
-				c = callbacks_ready;
-				callbacks_ready = null;
-				trigger_callbacks(c);
+				// Clear events and checking interval
+				window.removeEventListener("load", callback_check, false);
+				window.removeEventListener("readystatechange", callback_check, false);
 
-				// Complete
-				clear_events();
-			}
-		};
-		var on_document_load = function () {
-			// Loaded
-			state = 2;
+				if (check_interval !== null) {
+					clearInterval(check_interval);
+					check_interval = null;
+				}
 
-			// Callbacks
-			var c;
-			if (callbacks_asap !== null) {
-				c = callbacks_asap;
-				callbacks_asap = null;
-				trigger_callbacks(c);
+				// Okay
+				return true;
 			}
 
-			c = callbacks_ready;
-			callbacks_ready = null;
-			trigger_callbacks(c);
-
-			// Complete
-			clear_events();
+			// Not executed
+			return false;
 		};
 
-		// Clear events
-		var clear_events = function () {
-			if (on_document_readystatechange_interval !== null) {
-				// Remove timer
-				clearInterval(on_document_readystatechange_interval);
-				on_document_readystatechange_interval = null;
+		// Listen
+		window.addEventListener("load", callback_check, false);
+		window.addEventListener("readystatechange", callback_check, false);
 
-				// Remove events
-				document.removeEventListener("readystatechange", on_document_readystatechange, false);
-				document.removeEventListener("load", on_document_load, false);
-
-				// Clear callbacks
-				callbacks_asap = null;
-				callbacks_ready = null;
+		// Callback adding function
+		return function (cb) {
+			if (callbacks === null) {
+				// Ready to execute
+				cb.call(null);
 			}
-		};
+			else {
+				// Delay
+				callbacks.push(cb);
 
-		// Trigger callbacks
-		var trigger_callbacks = function (callback_list) {
-			for (var i = 0, j = callback_list.length; i < j; ++i) {
-				callback_list[i].call(window);
+				// Set a check interval
+				if (check_interval === null && callback_check() !== true) {
+					check_interval = setInterval(callback_check, check_interval_time);
+				}
 			}
-		};
-
-		// Setup events
-		on_document_readystatechange();
-		if (state < 2) {
-			document.addEventListener("readystatechange", on_document_readystatechange, false);
-			document.addEventListener("load", on_document_load, false);
-			on_document_readystatechange_interval = setInterval(on_document_readystatechange, 20);
-		}
-
-		// Return functions
-		return {
-
-			/**
-				Call a function as soon as possible when the DOM is fully loaded
-				(document.readyState == "interactive")
-
-				@param callback
-					The callback to be called
-					The call is formatted as such:
-						callback.call(window);
-			*/
-			asap: function (callback) {
-				if (callbacks_asap === null) {
-					// Call
-					callback.call(window);
-				}
-				else {
-					// Add
-					callbacks_asap.push(callback);
-				}
-			},
-			/**
-				Call a function as soon as possible when the DOM is fully loaded
-				(document.readyState == "complete")
-
-				@param callback
-					The callback to be called
-					The call is formatted as such:
-						callback.call(window);
-			*/
-			ready: function (callback) {
-				if (callbacks_ready === null) {
-					// Call
-					callback.call(window);
-				}
-				else {
-					// Add
-					callbacks_ready.push(callback);
-				}
-			},
-
 		};
 
 	})();
@@ -1592,7 +1517,7 @@
 		};
 	};
 
-	var on_ready = function () {
+	var on_ready_fn = function () {
 		// Start navigation
 		navigation.trigger_init_change();
 
@@ -1811,7 +1736,7 @@
 	homepage.on_page("open", [ "about" , "demo" ], true, on_demo_open);
 
 	// DOM start
-	ASAP.asap(on_ready);
+	on_ready(on_ready_fn);
 
 })();
 

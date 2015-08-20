@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="description" content="iex annotations help page" />
+	<meta name="keywords" content="iex,image extensions,image,extensions,expand,annotations,4chan,4chan-x,appchan-x,javascript,userscript,firefox,chrome,greasemonkey" />
+	<meta name="author" content="dnsev" />
+	<link rel="shortcut icon" href="../favicon.png" />
+	<link rel="stylesheet" href="style.css" />
+	<title>iex / Annotations Help</title>
+</head>
+<body>
+
+
+<div class="main"><div class="main_outer"><div class="main_inner">
+	<div class="home_link_container"><a class="home_link" href="../">home</a></div>
+
+
+	<h1><a href="">iex Annotations</a></h1>
+	<p>
+		iex annotations allow you to place notes on an image without actually editing the image.
+		This can be useful for quickly translating image elements without having to edit or upload a new image.
+	</p>
+
+
+	<h2 id="viewing"><a href="#viewing">Viewing annotations</a></h2>
+	<p>
+		Annotations are loaded from posts containing an <a>[iex:a/ANNOTATIONDATA]</a> tag.
+		This tag contains positioning and formatting information for the annotations.
+	</p>
+	<p>
+		Once the script has detected the tag, the annotations will be applied to the image when it is hovered.
+		Additionally, links to the image (including the tag itself) can be clicked to open the image in a new
+			tab <em>and</em> show the annotations in that tab.
+	</p>
+	<p>
+		If multiple annotation tags are detected for the same image, the annotations can be toggled through
+			by using the hotkey, which is by default the "<code>A</code>" key.
+	</p>
+
+
+	<h2 id="opening"><a href="#opening">Opening the editor</a></h2>
+	<p>
+		The annotation editor can be opened by opening a quick reply form and then doing one of the following:
+	</p>
+	<p><ul>
+		<li>
+			Select a file by using either of the available file selection buttons.<br />
+			<span class="small small_block">note that with appchan-x, you may have to select the file twice due to some script incompatabilities</span>
+		</li>
+		<li>
+			Select a file by clicking the <strong>URL</strong> button and then inputting a URL to an image.<br />
+			<span class="small small_block">this is for uploading by URL on 4chan-x and similar extensions</span>
+		</li>
+		<li>
+			Quote a post with an image and the post reference drop-down should auto-select.<br />
+			<span class="small small_block">with this method, uploading an image is not necessary</span>
+		</li>
+	</ul></p>
+	<p>
+		The first two methods apply the annotations to an image uploaded with the post.
+		The second method will apply the annotations to an image that is referenced in the post.
+		This allows raw images to be uploaded and annotations to be added later.
+	</p>
+
+
+	<h2 id="editor_image"><a href="#editor_image">Editor image window</a></h2>
+	<p>
+		In the annotation editor, there will be an image window and several options for annotation styling.
+	</p>
+	<p>
+		The image can be scrolled by clicking and dragging with the left/middle mouse buttons, and
+			scaled using the mouse wheel.
+	</p>
+	<p>
+		Once annotations are added, they can be moved by clicking and dragging;
+			resized by clicking and dragging around the border;
+			and sized-to-fit by double clicking.
+	</p>
+
+
+	<h2 id="styling"><a href="#styling">Editor styling</a></h2>
+	<p>
+		The rest of the editor contains styling features, most of which are probably not useful.
+		Includes:
+	</p>
+	<p><ul>
+		<li>
+			<strong>Colors</strong> - for text, decoration, and background
+		</li>
+		<li>
+			<strong>Alignment</strong> - vertical and horizontal alignment of the text
+		</li>
+		<li>
+			<strong>Font</strong> - font family, size, bold, and italic settings for the font
+		</li>
+		<li>
+			<strong>Decoration</strong> - text decorations in the form of varying shadows
+		</li>
+	</ul></p>
+
+
+	<h2 id="text_formatting"><a href="#text_formatting">Text formatting</a></h2>
+	<p>
+		In addition to the styles above, single lines of text can have formatters in them to change how they're displayed.
+		These can be added into the text editors in the editor window to achieve the following effects:
+	</p>
+	<p><ul>
+		<li>
+			<strong>\\</strong> - outputs a single backslash character<br />
+		</li>
+		<li>
+			<strong>\b</strong> - inverts the current font bold setting
+		</li>
+		<li>
+			<strong>\i</strong> - inverts the current font italic setting
+		</li>
+		<li>
+			<strong>\n</strong> - outputs a single newline
+		</li>
+		<li>
+			<strong>\h</strong> - hyphenates a word and inserts a newline
+		</li>
+		<li>
+			<strong>\c<span class="formatter_value">X.</span><span class="formatter_value">YY</span><span class="formatter_value">:</span></strong> - changes a color<br />
+			<span class="small small_block"><strong><span class="formatter_value">X.</span></strong> - optional; indicates the color to change (0=text; 1=decoration; 2=background)</span>
+			<span class="small small_block"><strong><span class="formatter_value">YY</span></strong> - the index of the color to use; hover over a color in the editor for its color index</span>
+			<span class="small small_block"><strong><span class="formatter_value">:</span></strong> - optional; only required to delimit in case the next character is a digit</span>
+		</li>
+		<li>
+			<strong>\d<span class="formatter_value">X</span></strong> - changes the text decoration<br />
+			<span class="small small_block"><strong><span class="formatter_value">X</span></strong> - the decoration to change to; hover over the decoration selector to find a decoration index</span>
+		</li>
+		<li>
+			<strong>\C</strong> - resets all colors to their defaults
+		</li>
+		<li>
+			<strong>\D</strong> - resets the text decoration to its default
+		</li>
+		<li>
+			<strong>\R</strong> - resets all text formattings to their defaults
+		</li>
+	</ul></p>
+
+
+	<h2 id="quick_reply_editing"><a href="#quick_reply_editing">Quick reply editing</a></h2>
+	<p>
+		Annotations can also be edited directly from the quick reply textarea, though it's not as flexible.
+		This allows for copy-pasting annotations from other sources to quickly continue editing.
+	</p>
+	</p>
+		The <a>[iex]</a> tag should automatically update once the textarea changes focus.
+	</p>
+
+
+	<h2 id="settings"><a href="#settings">Settings</a></h2>
+	<p>
+		The settings includes many options for annotations,
+			including options to disable,
+			modify image URLs or not,
+			transparency of annotations,
+			the hoykey for toggling,
+			and some defaults for the editor.
+	</p>
+
+</div></div></div>
+
+
+</body>
+</html>
