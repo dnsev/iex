@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Image Extensions
+// @name        Image Extensions (lite)
 // @description Expand images nicely
 // @namespace   dnsev
 // @version     3.0
