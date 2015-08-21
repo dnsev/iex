@@ -2,7 +2,7 @@
 // @name        Image Extensions (lite)
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     3.0
+// @version     3.0.1
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -54,7 +54,7 @@
 		is_firefox = (user_agent.indexOf("Firefox") >= 0),
 		is_chrome = (user_agent.indexOf(" Chrome/") >= 0),
 		is_opera = (!is_firefox && !is_chrome && user_agent.indexOf("MSIE") < 0),
-		userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions (lite)","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"3.0","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"},
+		userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions (lite)","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"3.0.1","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"},
 		api = null,
 		settings = null,
 		sync = null,
@@ -2361,6 +2361,22 @@
 				}
 
 				return null;
+			},
+			post_has_file: function (post_container) {
+				var post = post_container.querySelector(".post"),
+					node;
+
+				if (post !== null && (node = post.firstChild)) {
+					while (true) {
+						// File container
+						if (style.has_class(node, "file")) return true;
+
+						// Next
+						if (!(node = node.nextSibling)) break;
+					}
+				}
+
+				return false;
 			},
 			post_get_file_node_link_from_file_info: function (file_info) {
 				return file_info.querySelector("a");

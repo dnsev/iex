@@ -2,7 +2,7 @@
 // @name        Image Extensions (dev)
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     3.0
+// @version     3.0.1
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -2393,6 +2393,22 @@
 				}
 
 				return null;
+			},
+			post_has_file: function (post_container) {
+				var post = post_container.querySelector(".post"),
+					node;
+
+				if (post !== null && (node = post.firstChild)) {
+					while (true) {
+						// File container
+						if (style.has_class(node, "file")) return true;
+
+						// Next
+						if (!(node = node.nextSibling)) break;
+					}
+				}
+
+				return false;
 			},
 			post_get_file_node_link_from_file_info: function (file_info) {
 				return file_info.querySelector("a");
@@ -5912,15 +5928,18 @@
 					'.iex_annotation.iex_annotation_selected>.iex_annotation_background{opacity:0.5;}',
 					'.iex_annotation.iex_annotation_selected>.iex_annotation_outline{border-style:dashed;opacity:0.5;}',
 
-					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_background{opacity:0.125;transition:opacity 0.25s ease-in-out 0s;}',
-					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_background,',
-					'.iex_annotation:not(.iex_annotation_editing):not(.iex_annotation_transparent)>.iex_annotation_background{opacity:0.5;}',
-					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_outline{opacity:0.25;transition:opacity 0.25s ease-in-out 0s;}',
-					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_outline,',
-					'.iex_annotation:not(.iex_annotation_editing):not(.iex_annotation_transparent)>.iex_annotation_outline{opacity:0.5;}',
-					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_content{opacity:0.25;transition:opacity 0.25s ease-in-out 0s;}',
-					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_content,',
-					'.iex_annotation:not(.iex_annotation_editing):not(.iex_annotation_transparent)>.iex_annotation_content{opacity:1;}',
+					'.iex_annotation:not(.iex_annotation_editing)>.iex_annotation_background{opacity:0.5;transition:opacity 0.25s ease-in-out 0s;}',
+					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_background{opacity:0.8;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_background{opacity:0.25;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent:hover>.iex_annotation_background{opacity:0.75;}',
+					'.iex_annotation:not(.iex_annotation_editing)>.iex_annotation_outline{opacity:0.5;transition:opacity 0.25s ease-in-out 0s;}',
+					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_outline{opacity:0.5;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_outline{opacity:0.25;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent:hover>.iex_annotation_outline{opacity:0.8;}',
+					'.iex_annotation:not(.iex_annotation_editing)>.iex_annotation_content{opacity:1;transition:opacity 0.25s ease-in-out 0s;}',
+					'.iex_annotation:not(.iex_annotation_editing):hover>.iex_annotation_content{opacity:1;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent>.iex_annotation_content{opacity:0.5;}',
+					'.iex_annotation:not(.iex_annotation_editing).iex_annotation_transparent:hover>.iex_annotation_content{opacity:1;}',
 
 					'.iex_annotation.iex_annotation_align_left>.iex_annotation_content{text-align:left;}',
 					'.iex_annotation.iex_annotation_align_right>.iex_annotation_content{text-align:right;}',
@@ -11987,7 +12006,7 @@
 				w = mpreview.get_size().width,
 				scale = (w > 0 ? (cpreview.size.width / w) : 1.0);
 
-			annotation_container.style.fontSize = scale.toFixed(4) + "px";
+			annotation_container.style.fontSize = scale.toFixed(16) + "px";
 		};
 		var on_preview_size_change = function (image_hover, annotation_data) {
 			var true_size = image_hover.mpreview.get_size(),
@@ -12145,7 +12164,17 @@
 				) {
 					// Find the post number
 					if (tag_reader.image.post_number_suffix < 0) {
-						post_id = api.get_quotelink_target(links[i]);
+						for (i = 0; i < links.length; ++i) {
+							post_id = api.get_quotelink_target(links[i]);
+							n = api.get_post_container_from_id(post_id);
+							if (n !== null && api.post_has_file(n)) {
+								break;
+							}
+						}
+						if (i >= links.length) {
+							// Error
+							return [ null, -1, "No post reference with an image found in the comment" ];
+						}
 					}
 					else {
 						modval = Math.pow(10, tag_reader.image.post_number_suffix_digits);
@@ -12163,10 +12192,11 @@
 							while (i.length < tag_reader.image.post_number_suffix_digits) i = "0" + i;
 							return [ null, -1, "No post reference ending in " + i + " found in the comment" ];
 						}
+
+						n = api.get_post_container_from_id(post_id);
 					}
 
 					// Find the post container from the post number
-					n = api.get_post_container_from_id(post_id);
 					if (n === null) {
 						// Error
 						return [ null, -1, "Post number " + post_id + " could not be found" ];
@@ -12423,7 +12453,11 @@
 				clearInterval(this.image_size_poll_interval);
 				this.image_size_poll_interval = null;
 
-				if (this.image_node_size !== null) this.update_position();
+				if (this.image_node_size !== null) {
+					this.update_position();
+					if (this.secondary_timer !== null) clearTimeout(this.secondary_timer);
+					this.secondary_timer = setTimeout(this.on_secondary_timer_bind, 10);
+				}
 			},
 			update_position: function () {
 				this.image_node_rect = style.get_object_rect(this.image_node);
@@ -12438,7 +12472,7 @@
 			},
 			update_size: function () {
 				var scale = this.image_node_rect.width / this.image_size.width;
-				this.overlay.style.fontSize = scale.toFixed(4) + "px";
+				this.overlay.style.fontSize = scale.toFixed(16) + "px";
 			},
 		};
 
@@ -12503,7 +12537,7 @@
 						refs = TagWriter.get_all_post_references(annotations, suffix_text),
 						unique_digits = TagWriter.get_longest_same_end(s, refs);
 
-					if (unique_digits === 0) {
+					if (refs.length <= 1) {
 						this.bit_stream.add(0, bits_per.post_number_bits);
 					}
 					else {
