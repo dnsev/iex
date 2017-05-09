@@ -2,7 +2,7 @@
 // @name        Image Extensions (dev)
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     3.0.1
+// @version     3.0.2
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -5406,6 +5406,18 @@
 			return false;
 		};
 
+		var get_true_style = function (element, style_name) {
+			var s;
+			try {
+				s = document.defaultView.getComputedStyle(element);
+			}
+			catch (e) {}
+			if (!s) {
+				s = element.style || {};
+			}
+			return style_name ? s[style_name] : s;
+		};
+
 
 
 		Style.prototype = {
@@ -6159,21 +6171,17 @@
 				// Add
 				if (parent_node || (parent_node = document.querySelector("body"))) {
 					parent_node.appendChild(e);
-					s = window.getComputedStyle(e);
-					v = style_name ? s[style_name] : s;
+					v = get_true_style(e, style_name);
 					parent_node.removeChild(e);
 				}
 				else {
-					s = window.getComputedStyle(e);
+					v = get_true_style(e, style_name);
 				}
 
 				// Return style
 				return v;
 			},
-			get_true_style: function (element, style_name) {
-				var s = window.getComputedStyle(element);
-				return style_name ? s[style_name] : s;
-			},
+			get_true_style: get_true_style,
 
 			parse_css_color: function (color) {
 				if (/^transparent$/.test(color)) return [ 0 , 0 , 0 , 0 ];
