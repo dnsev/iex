@@ -8,10 +8,10 @@ set target_dir="%base_dir%iex"
 mkdir iex > nul 2> nul
 
 :: Create
-crxmake.py %target_dir% ..\builds\iex.user.js iex.user.js manifest.json manifest.json updates_base.xml ..\builds\updates.xml -noicon
+python crxmake.py %target_dir% ..\builds\iex.user.js iex.user.js manifest.json manifest.json updates_base.xml ..\builds\updates.xml -noicon
 
 :: Copy icons
-ico.py icons %target_dir%
+python ico.py icons %target_dir%
 
 :: Build
 %chrome% --pack-extension=%target_dir% --pack-extension-key=%target_dir%.pem --no-message-box || echo some error occured
