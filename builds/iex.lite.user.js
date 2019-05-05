@@ -2,7 +2,7 @@
 // @name        Image Extensions (lite)
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     3.0.3
+// @version     3.0.4
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -56,7 +56,7 @@
 		is_firefox = (user_agent.indexOf("Firefox") >= 0),
 		is_chrome = (user_agent.indexOf(" Chrome/") >= 0),
 		is_opera = (!is_firefox && !is_chrome && user_agent.indexOf("MSIE") < 0),
-		userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://boards.4channel.org/*","https://boards.4channel.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions (lite)","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"3.0.3","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"},
+		userscript = {"include":["http://boards.4chan.org/*","https://boards.4chan.org/*","http://boards.4channel.org/*","https://boards.4channel.org/*","http://i.4cdn.org/*","https://i.4cdn.org/*"],"name":"Image Extensions (lite)","grant":["GM_getValue","GM_setValue","GM_deleteValue","GM_listValues"],"run-at":"document-start","namespace":"dnsev","updateURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.meta.js","downloadURL":"https://raw.githubusercontent.com/dnsev/iex/master/builds/iex.user.js","version":"3.0.4","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAr0lEQVRo3u2ZQQ6AIAwEW+Nj9UX623pVQ2NRDIIzZyHdMGkhqhwxSaNSh8t6Bmmc5gPo6Zi0kboNhQhAgE4CABQYZOlJsbj3kDqFzula6UK1GV1tpp1Bq2PaFLBsvzayp7O/iVpKJxT6lEIhnqgV0SlTMxRqT6FcVd7oTijUjUKrltGPLvQrhbzjLtVtMr9HIV5kvMgA/g0/OOhCBCAAAQjQ1XXabqx5bUhFakCh2mytCzMhi1UZlAAAAABJRU5ErkJggg==","description":"Expand images nicely"},
 		api = null,
 		settings = null,
 		sync = null,
@@ -1236,9 +1236,11 @@
 		var on_hover_ui_element_add = function (element) {
 			var id = element.getAttribute("id");
 			if (id == "ihover") {
-				trigger.call(this, "image_hover_open", {
-					container: element
-				});
+				if (element.getAttribute("data-full-i-d")) {
+					trigger.call(this, "image_hover_open", {
+						container: element
+					});
+				}
 			}
 			else if (id == "qp") {
 				var pc = element.querySelector(".postContainer");

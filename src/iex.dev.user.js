@@ -2,7 +2,7 @@
 // @name        Image Extensions (dev)
 // @description Expand images nicely
 // @namespace   dnsev
-// @version     3.0.3
+// @version     3.0.4
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -1268,9 +1268,11 @@
 		var on_hover_ui_element_add = function (element) {
 			var id = element.getAttribute("id");
 			if (id == "ihover") {
-				trigger.call(this, "image_hover_open", {
-					container: element
-				});
+				if (element.getAttribute("data-full-i-d")) {
+					trigger.call(this, "image_hover_open", {
+						container: element
+					});
+				}
 			}
 			else if (id == "qp") {
 				var pc = element.querySelector(".postContainer");
